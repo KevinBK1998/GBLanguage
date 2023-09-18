@@ -4,6 +4,8 @@ labelDict = {}
 for x in f:
     if x == "\n":
         continue
+    if "//" in x:
+        continue
     if ":" in x:
         labelDict[x.split(":")[0]]=line
     if "CALL" in x:
@@ -63,36 +65,35 @@ for x in src:
     for key in labelDict:
         if key in x:
             x=x.replace(key, hex(labelDict[key]))
-    if "0x" in x:
-        instruction=x.split("x")[0]
-        opcode = assemblyMap[instruction]
-        line+=1
+    if "DATA" in x:
         x=x.split("x")[1].strip()
         n = int(x.strip(), 16)
-        if "DATA" in instruction:
-            # print(hex(n))
-            code = [n]
-        elif len(x)> 2 or "CALL" in instruction:
+        # print(hex(n))
+        code = [n]
+        line+=1
+    elif "0x" in x:
+        instruction=x.split("x")[0]
+        opcode = assemblyMap[instruction]
+        x=x.split("x")[1].strip()
+        n = int(x.strip(), 16)
+        if len(x)> 2 or "CALL" in instruction:
             l = n % 256
             h = n // 256
             # print(hex(l),hex(h))
             code = [opcode, l, h]
-            line+=2
+            line+=3
         elif "JR" in instruction:
-            line+=1
+            line+=2
             jump = n - line
-            print(n, line, jump)
+            # print(n, line, jump)
             if jump < 0:
                 jump += 0x100
-            # else:
-            #     jump -= 2
-            # print(jump)
-            print(hex(jump))
+            # print(hex(jump))
             code = [opcode, jump]
         else: 
             # print(hex(n))
             code = [opcode, n]
-            line+=1
+            line+=2
     elif "PREFIX" in x:
         instruction=x[7:].split("\n")[0]
         opcode = specialAssemblyMap[instruction]

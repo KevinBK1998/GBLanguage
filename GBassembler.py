@@ -12,6 +12,8 @@ for x in f:
         line+=2
     elif "PREFIX" in x:
         line+=2
+    elif "DATA" in x:
+        line+=1
     elif "0x" in x:
         pre=line
         line+=2
@@ -34,12 +36,15 @@ assemblyMap = {
     "LD C, A":0x4F,
     "LD D, A":0x57,
     "LD H, A":0x67,
-    "LD [HL], A":0x77,      "LD A, E":0x7B,         "LD A, H":0x7C,
+    "LD [HL], A":0x77,      "LD A, B":0x78,         "LD A, E":0x7B,         "LD A, H":0x7C,     "LD A, L":0x7D,
+    "ADD A, [HL]":0x86,
     "SUB A, B":0x90,
     "XOR A, A":0xAF,
-    "POP BC":0xC1,          "PUSH BC":0xC5,         "RET":0xC9,             "CALL 0":0xCD,
+    "CP [HL]":0xBE,
+    "POP BC":0xC1,          "PUSH BC":0xC5,         "RET":0xC9,             "CALL 0":0xCD,      "ADC A, 0":0xCE,
     "LD [HN], A, 0":0xE0,   "LD [HC], A":0xE2,      "LD [NN], A, 0":0xEA,
     "LD A, [HN], 0":0xF0,   "LD A, [HC]":0xF2,      "CP 0":0xFE,
+    "DATA 0":-1,
 }
 
 specialAssemblyMap = {
@@ -64,23 +69,26 @@ for x in src:
         line+=1
         x=x.split("x")[1].strip()
         n = int(x.strip(), 16)
-        if len(x)> 2 or "CALL" in instruction:
+        if "DATA" in instruction:
+            # print(hex(n))
+            code = [n]
+        elif len(x)> 2 or "CALL" in instruction:
             l = n % 256
             h = n // 256
             # print(hex(l),hex(h))
             code = [opcode, l, h]
             line+=2
         elif "JR" in instruction:
+            line+=1
             jump = n - line
-            # print(jump)
+            print(n, line, jump)
             if jump < 0:
-                jump += 0xFF
-            else:
-                jump -= 1
+                jump += 0x100
+            # else:
+            #     jump -= 2
             # print(jump)
             print(hex(jump))
             code = [opcode, jump]
-            line+=1
         else: 
             # print(hex(n))
             code = [opcode, n]

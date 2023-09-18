@@ -1,4 +1,21 @@
-f = open("bios.gsm", "r")
+import sys
+
+TEMP_FILE_NAME = "TEMP"
+SRC_EXT = ".gsm"
+DST_EXT = ".gb"
+src_file = TEMP_FILE_NAME + SRC_EXT
+dst_file = TEMP_FILE_NAME + DST_EXT
+
+if len(sys.argv) > 1:
+    src_file = sys.argv[1]
+    if SRC_EXT in src_file:
+        dst_file = src_file.split(".")[0]
+    else:
+        dst_file = src_file
+    dst_file += DST_EXT
+print("Parsing File :", src_file, ", Output in :", dst_file)
+
+f = open(src_file, "r")
 line = 0
 labelDict = {}
 for x in f:
@@ -27,8 +44,8 @@ for x in f:
 print(labelDict)
 f.close()
 
-src = open("bios.gsm", "r")
-bin = open("bios.gb", "wb")
+src = open(src_file, "r")
+bin = open(dst_file, "wb")
 MAGIC_PREFIX = 0xCB
 assemblyMap = { 
     "NOP":0x00,             "INC B":0x04,           "DEC B":0x05,           "LD B, 0":0x06,     "INC C":0x0C,       "DEC C":0x0D,       "LD C, 0":0x0E,

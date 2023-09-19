@@ -1,0 +1,1 @@
+int evaluate(struct tnode *t);

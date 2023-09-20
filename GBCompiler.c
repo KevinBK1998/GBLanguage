@@ -2,41 +2,61 @@
 #include <string.h>
 #include "exprtree.h"
 
-int reg = 0;
+char reg = 0;
+FILE* target_file;
 
-int getReg(){
-    return reg++;
-}
-int freeReg(){
-    return reg--;
+char getReg(){
+    int temp = reg;
+    char freeReg = 'A';
+    do{
+        temp /= 2;
+        freeReg++;
+    }while (temp%2);
+    reg |= (1 << (freeReg -'A'));
+    if (freeReg>'H'){
+        printf("OOM");
+        exit(1);
+    }
+    return freeReg == 'G' ? 'L' :freeReg;
 }
 
-int evaluate(struct tnode *t){
-    FILE* target_file = fopen("TEMP.gsm","w");
+int freeReg(char regToBeFreed){
+    int temp = regToBeFreed == 'L' ? 6 : regToBeFreed - 'A';
+    reg &= (1 << (temp -'A'));
+    return temp -'A';
+}
+
+int loadTOAccumulator(char load){
+    fprintf(target_file, "LD A, %c\n", load);
+    return 0;
+}
+
+int loadFROMAccumulator(char load){
+    fprintf(target_file, "LD %c, A\n", load);
+    return 0;
+}
+
+char codeGen(struct tnode *t){
     if(t->op == NULL)
     {
-        int n = getReg();
-        fprintf(target_file, "MOV R%d, %d\n", n, t->val);
-        return n;
+        char temp = getReg();
+        fprintf(target_file, "LD %c, 0x%X\n", temp, t->val);
+        return temp;
     }
     else{
-        int res;
+        char l = codeGen(t->left);
+        char r = codeGen(t->right);
+        loadTOAccumulator(l);
         switch(*(t->op)){
             case '+' :
-                
-                res = evaluate(t->left) + evaluate(t->right);
+                fprintf(target_file, "ADD A, %c\n", r);
                 break;
             case '-' : 
-                res = evaluate(t->left) - evaluate(t->right);
-                break;
-            case '*' : 
-                res = evaluate(t->left) * evaluate(t->right);
-                break;
-            case '/' : 
-                res = evaluate(t->left) / evaluate(t->right);
+                fprintf(target_file, "SUB A, %c\n", r);
                 break;
         }
-        printf("%s\n", t ->op);
-        return res;
+        freeReg(r);
+        loadFROMAccumulator(l);
+        return l;
     }
 }

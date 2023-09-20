@@ -1,1 +1,1 @@
-int evaluate(struct tnode *t);
+char codeGen(struct tnode *t);

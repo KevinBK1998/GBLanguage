@@ -52,12 +52,12 @@ assemblyMap = {
     "LD DE, 0":0x11,        "INC DE":0x13,          "DEC D":0x15,           "LD D, 0":0x16,     "RL A":0x17,        "JR 0":0x18,        "LD A, [DE]":0x1A,  "DEC E":0x1D,   "LD E, 0":0x1E,
     "JR NZ, 0":0x20,        "LD HL, 0":0x21,        "LDI [HL], A":0x22,     "INC HL":0x23,      "INC H":0x24,       "JR Z, 0":0x28,     "LD L, 0":0x2E,
     "LD SP, 0":0x31,        "LDD [HL], A":0x32,     "DEC A":0x3D,           "LD A, 0":0x3E,
-    "LD C, A":0x4F,
+    "LD B, A":0x47,         "LD C, A":0x4F,
     "LD D, A":0x57,
     "LD H, A":0x67,
-    "LD [HL], A":0x77,      "LD A, B":0x78,         "LD A, E":0x7B,         "LD A, H":0x7C,     "LD A, L":0x7D,
-    "ADD A, [HL]":0x86,
-    "SUB A, B":0x90,
+    "LD [HL], A":0x77,      "LD A, B":0x78,         "LD A, C":0x79,         "LD A, E":0x7B,     "LD A, H":0x7C,     "LD A, L":0x7D,
+    "ADD A, C":0x81,        "ADD A, [HL]":0x86,
+    "SUB A, B":0x90,        "SUB A, D":0x92,
     "XOR A, A":0xAF,
     "CP [HL]":0xBE,
     "POP BC":0xC1,          "PUSH BC":0xC5,         "RET":0xC9,             "CALL 0":0xCD,      "ADC A, 0":0xCE,
@@ -72,6 +72,10 @@ specialAssemblyMap = {
 }
 
 line = 0
+while line < 0x104:
+    bin.write(bytearray([0]))
+    line+=1
+
 for x in src:
     if x == "\n":
         continue
@@ -123,4 +127,9 @@ for x in src:
         # print(hex(opcode))
         code = [opcode]
         line+=1
+    # print (code)
     bin.write(bytearray(code))
+print("Padding with space : ", 2097152- line)
+while line < 2097152:
+    bin.write(bytearray([0]))
+    line+=1

@@ -7,6 +7,7 @@
     #include "GBCompiler.c"
     
     int yylex(void);
+    extern FILE* yyin;
 %}
 
 %union{
@@ -45,7 +46,13 @@ yyerror(char const *s)
 
 
 
-int main(void) {
+int main(int argc, char* argv[]) {
+    if(argc > 1)
+    {
+        FILE *fp = fopen(argv[1], "r");
+        if(fp)
+            yyin = fp;
+    }
     target_file = fopen("TEMP.gsm","w+");
     int checksum = 0;
     int rom_reg_address = 0x134;
@@ -70,7 +77,7 @@ int main(void) {
     fprintf(target_file, "DATA 0x%X\n", 0);
 
     // Start of user program
-    fprintf(target_file, "START:");
+    fprintf(target_file, "\nSTART:\n");
     yyparse();
     fclose(target_file);
     return 0;

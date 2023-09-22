@@ -16,6 +16,8 @@
         }
 "+"     {return PLUS;}
 "-"     {return MINUS;}
+"*"     {return MUL;}
+"/"     {return DIV;}
 [ \t]   {/*do nothing*/}
 [()]    {return *yytext;}
 [\n]    {return END;}

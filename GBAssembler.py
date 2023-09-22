@@ -28,6 +28,8 @@ for x in f:
         continue
     if ":" in x:
         labelDict[x.split(":")[0]]=line
+        if x.split(":")[1] == '\n':
+            continue
     if "CALL" in x or "JP" in x:
         line+=3
     elif "JR" in x:
@@ -55,13 +57,13 @@ assemblyMap = {
     "NOP":0x00,             "INC B":0x04,           "DEC B":0x05,           "LD B, 0":0x06,     "INC C":0x0C,       "DEC C":0x0D,       "LD C, 0":0x0E,
     "LD DE, 0":0x11,        "INC DE":0x13,          "DEC D":0x15,           "LD D, 0":0x16,     "RL A":0x17,        "JR 0":0x18,        "LD A, [DE]":0x1A,  "DEC E":0x1D,   "LD E, 0":0x1E,
     "JR NZ, 0":0x20,        "LD HL, 0":0x21,        "LDI [HL], A":0x22,     "INC HL":0x23,      "INC H":0x24,       "JR Z, 0":0x28,     "LD L, 0":0x2E,
-    "LD SP, 0":0x31,        "LDD [HL], A":0x32,     "DEC A":0x3D,           "LD A, 0":0x3E,
+    "JR NC, 0":0x30,        "LD SP, 0":0x31,        "LDD [HL], A":0x32,     "DEC A":0x3D,       "LD A, 0":0x3E,
     "LD B, A":0x47,         "LD C, A":0x4F,
     "LD D, A":0x57,
     "LD H, A":0x67,
     "HALT":0x76,            "LD [HL], A":0x77,      "LD A, B":0x78,         "LD A, C":0x79,     "LD A, E":0x7B,     "LD A, H":0x7C,     "LD A, L":0x7D,
-    "ADD A, C":0x81,        "ADD A, [HL]":0x86,
-    "SUB A, B":0x90,        "SUB A, D":0x92,
+    "ADD A, B":0x80,        "ADD A, C":0x81,        "ADD A, [HL]":0x86,
+    "SUB A, B":0x90,        "SUB A, C":0x91,        "SUB A, D":0x92,
     "XOR A, A":0xAF,
     "CP [HL]":0xBE,
     "POP BC":0xC1,          "JP 0":0xC3,            "PUSH BC":0xC5,         "RET":0xC9,         "CALL 0":0xCD,      "ADC A, 0":0xCE,
@@ -97,12 +99,12 @@ while line < 0x134:
 logo.close()
 
 for x in src:
+    if ":" in x:
+        x=x.split(":")[1]
     if x == "\n":
         continue
     if "//" in x:
         continue
-    if ":" in x:
-        x=x.split(":")[1]
     for key in labelDict:
         if key in x:
             x=x.replace(key, hex(labelDict[key]))
@@ -117,13 +119,7 @@ for x in src:
         opcode = assemblyMap[instruction]
         x=x.split("x")[1].strip()
         n = int(x.strip(), 16)
-        if len(x)> 2 or "CALL" in instruction or "JP" in instruction:
-            l = n % 256
-            h = n // 256
-            # print(hex(l),hex(h))
-            code = [opcode, l, h]
-            line+=3
-        elif "JR" in instruction:
+        if "JR" in instruction:
             line+=2
             jump = n - line
             # print(n, line, jump)
@@ -131,6 +127,12 @@ for x in src:
                 jump += 0x100
             # print(hex(jump))
             code = [opcode, jump]
+        elif len(x)> 2 or "CALL" in instruction or "JP" in instruction:
+            l = n % 256
+            h = n // 256
+            print(n, hex(l),hex(h))
+            code = [opcode, l, h]
+            line+=3
         else: 
             # print(hex(n))
             code = [opcode, n]
@@ -147,7 +149,7 @@ for x in src:
         # print(hex(opcode))
         code = [opcode]
         line+=1
-    # print (code)
+    # print(code, hex(line))
     bin.write(bytearray(code))
 
 # write ascii data

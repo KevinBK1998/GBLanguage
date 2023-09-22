@@ -1,12 +1,13 @@
 %{
+    #include <iostream>
     #include <stdlib.h>
-    #include <stdio.h>
     #include "exprtree.h"
-    #include "exprtree.c"
+    #include "exprtree.cpp"
     #include "GBCompiler.h"
-    #include "GBCompiler.c"
-    
+    #include "GBCompiler.cpp"
+    using namespace std;
     int yylex(void);
+    void yyerror(char const *s);
     extern FILE* yyin;
 %}
 
@@ -14,32 +15,53 @@
     struct tnode *node;
 }
 
-%type <node> expr NUM program END
-%token NUM PLUS MINUS MUL DIV END
+%type <node> Program ListStatement Statement InputStatement OutputStatement AssignmentStatement Expression
+%token BLOCK_OPEN BLOCK_CLOSE PLUS MINUS MUL DIV READ WRITE
+%token <node> ID NUM
 %left PLUS MINUS
 %left MUL DIV
 
 %%
 
-program : expr END          {
-                                $$ = $2;
-                                codeGen($1);
-                                fprintf(target_file, "HALT");
-                                exit(0);
-                            }
+Program : BLOCK_OPEN ListStatement BLOCK_CLOSE  {
+                                                    $$ = $2;
+                                                    codeGen($2);
+                                                    fprintf(target_file, "HALT");
+                                                    exit(0);
+                                                }
+        | BLOCK_OPEN BLOCK_CLOSE                {$$ = NULL;}
         ;
 
-expr    : expr PLUS expr    {$$ = makeOperatorNode('+',$1,$3);}
-        | expr MINUS expr   {$$ = makeOperatorNode('-',$1,$3);}
-        | expr MUL expr     {$$ = makeOperatorNode('*',$1,$3);}
-        | expr DIV expr     {$$ = makeOperatorNode('/',$1,$3);}
-        | '(' expr ')'      {$$ = $2;}
-        | NUM               {$$ = $1;}
-        ;
+ListStatement   : ListStatement Statement   {$$ = makeConnectorNode($1,$2);}
+                | Statement                 {$$ = $1;}
+                ;
+
+Statement   : InputStatement        {$$ = $1;}
+            | OutputStatement       {$$ = $1;}
+            | AssignmentStatement   {$$ = $1;}
+            ;
+
+InputStatement  : READ '(' ID ')' ';'   {$$ = makeOperatorNode("read",$3);}
+                ;
+
+OutputStatement : WRITE '(' Expression ')' ';' {$$ = makeOperatorNode("write",$3);}
+                ;
+
+AssignmentStatement : ID '=' Expression ';' {$$ = makeOperatorNode('=',$1,$3);}
+                    ;
+
+Expression  : Expression PLUS Expression    {$$ = makeOperatorNode('+',$1,$3);}
+            | Expression MINUS Expression   {$$ = makeOperatorNode('-',$1,$3);}
+            | Expression MUL Expression     {$$ = makeOperatorNode('*',$1,$3);}
+            | Expression DIV Expression     {$$ = makeOperatorNode('/',$1,$3);}
+            | '(' Expression ')'            {$$ = $2;}
+            | ID                            {$$ = $1;}
+            | NUM                           {$$ = $1;}
+            ;
 
 %%
 
-yyerror(char const *s)
+void yyerror(char const *s)
 {
     printf("yyerror %s",s);
 }

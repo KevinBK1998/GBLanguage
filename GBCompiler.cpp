@@ -1,7 +1,7 @@
-#include <stdio.h>
+#include <iostream>
 #include <string.h>
 #include "exprtree.h"
-
+using namespace std;
 char reg = 0;
 char label[] = "A_0";
 FILE* target_file;
@@ -15,7 +15,7 @@ char getReg(){
     }while (temp%2);
     reg |= (1 << (freeReg -'A'));
     if (freeReg>'H'){
-        printf("OOM");
+        cout<<"OOM"<<endl;
         exit(1);
     }
     return freeReg == 'G' ? 'L' :freeReg;
@@ -62,7 +62,14 @@ int loadFROMAccumulator(char load){
 }
 
 char codeGen(struct tnode *t){
-    if(t->op == NULL)
+    cout<< t->nodeType << endl;
+    if (t->nodeType == NUMERIC_LITERAL){
+    cout<< t->nodeType << endl;
+        char temp = getReg();
+        fprintf(target_file, "LD %c, 0x%X\n", temp, t->val);
+        return temp;
+    }else
+    if(t->varName == NULL)
     {
         char temp = getReg();
         fprintf(target_file, "LD %c, 0x%X\n", temp, t->val);
@@ -72,7 +79,7 @@ char codeGen(struct tnode *t){
         char l = codeGen(t->left);
         char r = codeGen(t->right);
         char* tempLabel;
-        switch(*(t->op)){
+        switch(*(t->varName)){
             case '+':
                 loadTOAccumulator(l);
                 fprintf(target_file, "ADD A, %c\n", r);
@@ -103,7 +110,7 @@ char codeGen(struct tnode *t){
                 fprintf(target_file, "DEC %c\n", l);
                 break;
             default:
-                printf("Op:%c",t->op);
+                cout<<"Op:"<< t->varName<< endl;
                 exit(1);
         }
         freeReg(r);

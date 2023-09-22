@@ -5,6 +5,8 @@ SRC_EXT = ".gsm"
 DST_EXT = ".gb"
 src_file = TEMP_FILE_NAME + SRC_EXT
 dst_file = TEMP_FILE_NAME + DST_EXT
+logo_file = "logo" + DST_EXT
+asc_file = "ascii_tiles" + DST_EXT
 
 if len(sys.argv) > 1:
     src_file = sys.argv[1]
@@ -12,11 +14,12 @@ if len(sys.argv) > 1:
         dst_file = src_file.split(".")[0]
     else:
         dst_file = src_file
+        src_file +=SRC_EXT
     dst_file += DST_EXT
 print("Parsing File :", src_file, ", Output in :", dst_file)
 
 f = open(src_file, "r")
-line = 0
+line = 0x134
 labelDict = {}
 for x in f:
     if x == "\n":
@@ -41,6 +44,7 @@ for x in f:
             line+=1
     else:
         line+=1
+labelDict["ASCII_TILES"]=line
 print(labelDict)
 f.close()
 
@@ -55,7 +59,7 @@ assemblyMap = {
     "LD B, A":0x47,         "LD C, A":0x4F,
     "LD D, A":0x57,
     "LD H, A":0x67,
-    "LD [HL], A":0x77,      "LD A, B":0x78,         "LD A, C":0x79,         "LD A, E":0x7B,     "LD A, H":0x7C,     "LD A, L":0x7D,
+    "HALT":0x76,            "LD [HL], A":0x77,      "LD A, B":0x78,         "LD A, C":0x79,     "LD A, E":0x7B,     "LD A, H":0x7C,     "LD A, L":0x7D,
     "ADD A, C":0x81,        "ADD A, [HL]":0x86,
     "SUB A, B":0x90,        "SUB A, D":0x92,
     "XOR A, A":0xAF,
@@ -74,6 +78,23 @@ line = 0
 while line < 0x101:
     bin.write(bytearray([0]))
     line+=1
+
+# jump to user program
+opcode = assemblyMap["JP 0"]
+n = labelDict["START"]
+l = n % 256
+h = n // 256
+# print(hex(l),hex(h))
+code = [opcode, l, h]
+line+=3
+bin.write(bytearray(code))
+
+# write logo data
+logo = open(logo_file, "rb")
+while line < 0x134:
+    bin.write(logo.read(1))
+    line+=1
+logo.close()
 
 for x in src:
     if x == "\n":
@@ -128,7 +149,16 @@ for x in src:
         line+=1
     # print (code)
     bin.write(bytearray(code))
-print("Padding with space : ", 2097152- line)
-while line < 2097152:
+
+# write ascii data
+with open(asc_file, 'rb') as asc:
+    asc.seek(0,2)
+    size = asc.tell()
+    asc.seek(0,0)
+    bin.write(asc.read(size))
+    line+=size
+MAX_FILE_SIZE = (line // 0x100 +1)*0x100
+print("Padding with", MAX_FILE_SIZE - line, "space(s) to reach SIZE =", MAX_FILE_SIZE)
+while line < MAX_FILE_SIZE:
     bin.write(bytearray([0]))
     line+=1

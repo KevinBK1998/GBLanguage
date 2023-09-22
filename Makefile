@@ -10,6 +10,8 @@ lex.yy.c: tokenizer.l
 	lex $<
 y.tab.c: parser.y
 	yacc -d $<
+clean:
+	rm -f TEMP.gb
 .PHONY: reload
 reload:
 	make

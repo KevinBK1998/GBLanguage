@@ -51,13 +51,39 @@ int main(void) {
         0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99,
         0xBB, 0xBB, 0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC,
         0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E,
-        0x43, 0x50, 0x55, 0x5F, 0x49, 0x4E, 0x53, 0x54, 0x52, 0x53,
     };
     target_file = fopen("TEMP.gsm","w+");
-    fprintf(target_file, "CALL 0x%X\n", 0x200);
-    for (int i=0; i< 56; i++){
+    // Redirect to Source code
+    fprintf(target_file, "JP START\n", 0x150);
+    // Store data for logo
+    for (int i=0; i< 0x30; i++){
         fprintf(target_file, "DATA 0x%X\n", logo_data[i]);
     }
+
+    int checksum = 0;
+    int rom_reg_address = 0x134;
+    // Store name of the program upto 11 char
+    char *name = "TEMP";
+    int shortName = 0;
+    for (int i=0; i<11; i++,rom_reg_address++){
+        if (!shortName && name[i]=='\0')
+            shortName = 1;
+        fprintf(target_file, "DATA 0x%X\n", (shortName ? 0 : name[i]) );
+        checksum+=(shortName ? 0 : name[i]);
+    }
+    for (;rom_reg_address<0x14D;rom_reg_address++){
+        fprintf(target_file, "DATA 0x%X\n", 0);
+        checksum+=0;
+    }
+    checksum+=0x19;
+    checksum=0-checksum;
+    /* printf("CHECKSUM-HI:%X\n", (checksum/0x100)&0xFF); */
+    /* fprintf(target_file, "DATA 0x%X\n", (checksum/0x100)&0xFF); */
+    /* printf("COMPLEMENT-CHECK:%X\n",checksum&0xFF); */
+    fprintf(target_file, "DATA 0x%X\n", checksum&0xFF);
+    fprintf(target_file, "DATA 0x%X\n", 0);
+    fprintf(target_file, "DATA 0x%X\n", 0);
+    fprintf(target_file, "START:");
     yyparse();
     fclose(target_file);
     return 0;

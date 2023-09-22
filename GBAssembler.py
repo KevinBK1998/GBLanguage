@@ -25,7 +25,7 @@ for x in f:
         continue
     if ":" in x:
         labelDict[x.split(":")[0]]=line
-    if "CALL" in x:
+    if "CALL" in x or "JP" in x:
         line+=3
     elif "JR" in x:
         line+=2
@@ -60,10 +60,9 @@ assemblyMap = {
     "SUB A, B":0x90,        "SUB A, D":0x92,
     "XOR A, A":0xAF,
     "CP [HL]":0xBE,
-    "POP BC":0xC1,          "PUSH BC":0xC5,         "RET":0xC9,             "CALL 0":0xCD,      "ADC A, 0":0xCE,
+    "POP BC":0xC1,          "JP 0":0xC3,            "PUSH BC":0xC5,         "RET":0xC9,         "CALL 0":0xCD,      "ADC A, 0":0xCE,
     "LD [HN], A, 0":0xE0,   "LD [HC], A":0xE2,      "LD [NN], A, 0":0xEA,
     "LD A, [HN], 0":0xF0,   "LD A, [HC]":0xF2,      "CP 0":0xFE,
-    "DATA 0":-1,
 }
 
 specialAssemblyMap = {
@@ -72,7 +71,7 @@ specialAssemblyMap = {
 }
 
 line = 0
-while line < 0x104:
+while line < 0x101:
     bin.write(bytearray([0]))
     line+=1
 
@@ -97,7 +96,7 @@ for x in src:
         opcode = assemblyMap[instruction]
         x=x.split("x")[1].strip()
         n = int(x.strip(), 16)
-        if len(x)> 2 or "CALL" in instruction:
+        if len(x)> 2 or "CALL" in instruction or "JP" in instruction:
             l = n % 256
             h = n // 256
             # print(hex(l),hex(h))

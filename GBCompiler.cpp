@@ -75,8 +75,7 @@ char handleIdentifierLVal(char *var){
 void readFromMemory(char address){
     if(address>'C' && reg&0b100)
         fprintf(target_file, "PUSH BC\n");
-    if (address != 'C')
-        fprintf(target_file, "LD C, %c\n", address);
+    fprintf(target_file, "LD C, %c\n", address);
     fprintf(target_file, "LD A, [HC]\n");
     if(address>'C' && reg&0b100)
         fprintf(target_file, "POP BC\n");
@@ -153,14 +152,17 @@ char handleOperator(char* op, tnode* operand1, tnode* operand2){
 void handleFunctionCalls(tnode* exp){
     if (exp->varName == "write"){
         char temp = codeGen(exp->left);
-        fprintf(target_file, "//WRITE %c\n", temp);
+        fprintf(target_file, "//WRITE\n");
+        fprintf(target_file, "LD A, 0x1\n");
         fprintf(target_file, "LD B, %c\n", temp);
+        fprintf(target_file, "CALL LIBRARY\n");
         freeReg(temp);
     }
     else{
+        fprintf(target_file, "//READ\n");
+        fprintf(target_file, "LD A, 0x0\n");
+        fprintf(target_file, "CALL LIBRARY\n");
         char add = handleIdentifierLVal(exp->left->varName);
-        fprintf(target_file, "//READ A\n");
-        fprintf(target_file, "LD A, 0x1\n");
         char temp = getReg();
         fprintf(target_file, "LD %c, A\n", temp);
         writeToMemory(add, temp);

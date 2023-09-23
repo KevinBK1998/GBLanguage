@@ -1,7 +1,9 @@
 run: TEMP.gb
 	cp TEMP.gb ~/GBemu
-TEMP.gb: TEMP.gsm
+TEMP.gb: TEMP.gsm library.gb
 	python3 GBAssembler.py
+library.gb: library.gsm
+	python3 GBAssembler.py library
 TEMP.gsm: in2post.exe
 	./in2post.exe work.gbpl
 in2post.exe: y.tab.c lex.yy.c GBCompiler.cpp exprtree.cpp

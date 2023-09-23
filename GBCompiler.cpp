@@ -28,12 +28,10 @@ char* getLabel(){
         labelChar++;
         labelNum=0;
     }
-    char oldLabel[4];
-    strcpy(oldLabel, label);
+    char* oldLabel = strdup(label);
     label[0] = labelChar;
     label[2] = labelNum + '0';
-    char* freeLabel = oldLabel;
-    return freeLabel;
+    return oldLabel;
 }
 
 int freeReg(char regToBeFreed){
@@ -61,59 +59,138 @@ int loadFROMAccumulator(char load){
     return 0;
 }
 
-char codeGen(struct tnode *t){
-    cout<< t->nodeType << endl;
-    if (t->nodeType == NUMERIC_LITERAL){
-    cout<< t->nodeType << endl;
-        char temp = getReg();
-        fprintf(target_file, "LD %c, 0x%X\n", temp, t->val);
-        return temp;
-    }else
-    if(t->varName == NULL)
-    {
-        char temp = getReg();
-        fprintf(target_file, "LD %c, 0x%X\n", temp, t->val);
-        return temp;
+char handleNumericLiteral(int literal){
+    char temp = getReg();
+    fprintf(target_file, "LD %c, 0x%X\n", temp, literal);
+    return temp;
+}
+
+char handleIdentifierLVal(char *var){
+    // cout<<var<<endl;
+    char temp = getReg();
+    fprintf(target_file, "LD %c, 0x%X\n", temp, var[0]+0x1F);
+    return temp;
+}
+
+void readFromMemory(char address){
+    if(address>'C' && reg&0b100)
+        fprintf(target_file, "PUSH BC\n");
+    if (address != 'C')
+        fprintf(target_file, "LD C, %c\n", address);
+    fprintf(target_file, "LD A, [HC]\n");
+    if(address>'C' && reg&0b100)
+        fprintf(target_file, "POP BC\n");
+    fprintf(target_file, "LD %c, A\n", address);
+}
+
+char handleIdentifier(tnode* var){
+    char temp = handleIdentifierLVal(var->varName);
+    readFromMemory(temp);
+    return temp;
+}
+
+void writeToMemory(char address, char data){
+    if(address>'C' && reg&0b100)
+        fprintf(target_file, "PUSH BC\n");
+    fprintf(target_file, "LD A, %c\n", data);
+    if (address != 'C')
+        fprintf(target_file, "LD C, %c\n", address);
+    fprintf(target_file, "LD [HC], A\n");
+    if(address>'C' && reg&0b100)
+        fprintf(target_file, "POP BC\n");
+    freeReg(data);
+    freeReg(address);
+}
+
+void handleAssignment(tnode* left, tnode* right){
+    char r = codeGen(right);
+    char l = handleIdentifierLVal(left->varName);
+    writeToMemory(l,r);
+}
+
+char handleOperator(char* op, tnode* operand1, tnode* operand2){
+    char l = codeGen(operand1);
+    char r = codeGen(operand2);
+    char* tempLabel;
+    switch(*(op)){
+    case '+':
+        loadTOAccumulator(l);
+        fprintf(target_file, "ADD A, %c\n", r);
+        loadFROMAccumulator(l);
+        break;
+    case '*':
+        clearAccumulator();
+        tempLabel = getLabel();
+        fprintf(target_file, "\n%s:\n", tempLabel);
+        fprintf(target_file, "ADD A, %c\n", l);
+        fprintf(target_file, "DEC %c\n", r);
+        fprintf(target_file, "JR NZ, %s\n\n", tempLabel);
+        loadFROMAccumulator(l);
+        break;
+    case '-':
+        loadTOAccumulator(l);
+        fprintf(target_file, "SUB A, %c\n", r);
+        loadFROMAccumulator(l);
+        break;
+    case '/':
+        loadTOAccumulator(l);
+        clearRegister(l);
+        tempLabel = getLabel();
+        fprintf(target_file, "\n%s:\n", tempLabel);
+        fprintf(target_file, "INC %c\n", l);
+        fprintf(target_file, "SUB A, %c\n", r);
+        fprintf(target_file, "JR NC, %s\n\n", tempLabel);
+        fprintf(target_file, "DEC %c\n", l);
+        break;
+    default:
+        cout<<"Op:"<< op<< endl;
+        exit(-1);
+    }
+    freeReg(r);
+    return l;
+}
+
+void handleFunctionCalls(tnode* exp){
+    if (exp->varName == "write"){
+        char temp = codeGen(exp->left);
+        fprintf(target_file, "//WRITE %c\n", temp);
+        fprintf(target_file, "LD B, %c\n", temp);
+        freeReg(temp);
     }
     else{
-        char l = codeGen(t->left);
-        char r = codeGen(t->right);
-        char* tempLabel;
-        switch(*(t->varName)){
-            case '+':
-                loadTOAccumulator(l);
-                fprintf(target_file, "ADD A, %c\n", r);
-                loadFROMAccumulator(l);
-                break;
-            case '*':
-                clearAccumulator();
-                tempLabel = getLabel();
-                fprintf(target_file, "\n%s:\n", tempLabel);
-                fprintf(target_file, "ADD A, %c\n", l);
-                fprintf(target_file, "DEC %c\n", r);
-                fprintf(target_file, "JR NZ, %s\n", tempLabel);
-                loadFROMAccumulator(l);
-                break;
-            case '-':
-                loadTOAccumulator(l);
-                fprintf(target_file, "SUB A, %c\n", r);
-                loadFROMAccumulator(l);
-                break;
-            case '/':
-                loadTOAccumulator(l);
-                clearRegister(l);
-                tempLabel = getLabel();
-                fprintf(target_file, "\n%s:\n", tempLabel);
-                fprintf(target_file, "INC %c\n", l);
-                fprintf(target_file, "SUB A, %c\n", r);
-                fprintf(target_file, "JR NC, %s\n", tempLabel);
-                fprintf(target_file, "DEC %c\n", l);
-                break;
-            default:
-                cout<<"Op:"<< t->varName<< endl;
-                exit(1);
-        }
-        freeReg(r);
-        return l;
+        char add = handleIdentifierLVal(exp->left->varName);
+        fprintf(target_file, "//READ A\n");
+        fprintf(target_file, "LD A, 0x1\n");
+        char temp = getReg();
+        fprintf(target_file, "LD %c, A\n", temp);
+        writeToMemory(add, temp);
     }
+}
+
+char codeGen(struct tnode *t){
+    // cout<< t->nodeType << endl;
+    switch (t->nodeType)
+    {
+    case NUMERIC_LITERAL:
+        return handleNumericLiteral(t->val);
+    case IDENTIFIER:
+        return handleIdentifier(t);
+    case ASSIGNMENT:
+        handleAssignment(t->left, t->right);
+        break;
+    case OPERATOR:
+        return handleOperator(t->varName, t->left, t->right);
+    case FUNCTION_CALL:
+        handleFunctionCalls(t);
+        break;
+    case CONNECTOR:
+        codeGen(t->left);
+        codeGen(t->right);
+        break;
+    default:
+    cout<<"Undefined:"<< t->varName<< endl;
+        exit(-1);
+        break;
+    }
+    return 0;
 }

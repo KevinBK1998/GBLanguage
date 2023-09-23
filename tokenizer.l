@@ -1,5 +1,6 @@
 %{
     #include <stdlib.h>
+    #include <string.h>
     #include <stdio.h>
     #include "y.tab.h"
     #include "exprtree.h"
@@ -11,24 +12,29 @@
 %%
 
 "read"  {return READ;}
-"write"  {return WRITE;}
+"write" {return WRITE;}
+
+[a-zA-Z][a-zA-Z0-9_]*   {
+                            char* temp = strdup(yytext);
+                            yylval.node = makeLeafNode(temp);
+                            return ID;
+                        }
+[0-9]+  {
+            number = atoi(yytext);
+            yylval.node = makeLeafNode(number);
+            return NUM;
+        }
+
 "+"     {return PLUS;}
 "-"     {return MINUS;}
 "*"     {return MUL;}
 "/"     {return DIV;}
 "{"     {return BLOCK_OPEN;}
 "}"     {return BLOCK_CLOSE;}
+
 [ \t\n] {/*do nothing*/}
 [()=;]  {return *yytext;}
-[0-9]+  {
-            number = atoi(yytext);
-            yylval.node = makeLeafNode(number);
-            return NUM;
-        }
-[a-zA-Z][a-zA-Z0-9_]*   {
-                            yylval.node = makeLeafNode(yytext);
-                            return ID;
-                        }
+
 .       {yyerror("unknown character\n");exit(1);}
 
 %%

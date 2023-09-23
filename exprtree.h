@@ -4,6 +4,7 @@
 enum NodeType{
     NUMERIC_LITERAL,
     IDENTIFIER,
+    ASSIGNMENT,
     OPERATOR,
     FUNCTION_CALL,
     CONNECTOR,

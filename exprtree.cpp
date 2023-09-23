@@ -29,6 +29,8 @@ struct tnode* makeOperatorNode(char c,struct tnode *l,struct tnode *r){
     temp->varName = (char *)malloc(sizeof(char));
     *(temp->varName) = c;
     temp->nodeType = OPERATOR;
+    if(c=='=')
+        temp->nodeType = ASSIGNMENT;
     temp->left = l;
     temp->right = r;
     return temp;

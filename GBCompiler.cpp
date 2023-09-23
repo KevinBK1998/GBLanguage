@@ -2,9 +2,17 @@
 #include <string.h>
 #include "exprtree.h"
 using namespace std;
+
 char reg = 0;
 char label[] = "A_0";
+bool loadedAscii = false;
 FILE* target_file;
+
+enum FunctionType{
+    READ_CALL,
+    WRITE_CALL,
+    ASCII_LOAD,
+};
 
 char getReg(){
     int temp = reg;
@@ -149,18 +157,28 @@ char handleOperator(char* op, tnode* operand1, tnode* operand2){
     return l;
 }
 
+void loadAsciiTable(){
+    if (loadedAscii)
+        return;
+    fprintf(target_file, "//LOAD ASCII\n");
+    fprintf(target_file, "LD A, 0x%X\n", ASCII_LOAD);
+    fprintf(target_file, "CALL LIBRARY\n");
+    loadedAscii = true;
+}
+
 void handleFunctionCalls(tnode* exp){
+    loadAsciiTable();
     if (exp->varName == "write"){
         char temp = codeGen(exp->left);
         fprintf(target_file, "//WRITE\n");
-        fprintf(target_file, "LD A, 0x1\n");
+        fprintf(target_file, "LD A, 0x%X\n", WRITE_CALL);
         fprintf(target_file, "LD B, %c\n", temp);
         fprintf(target_file, "CALL LIBRARY\n");
         freeReg(temp);
     }
     else{
         fprintf(target_file, "//READ\n");
-        fprintf(target_file, "LD A, 0x0\n");
+        fprintf(target_file, "LD A, 0x%X\n", READ_CALL);
         fprintf(target_file, "CALL LIBRARY\n");
         char add = handleIdentifierLVal(exp->left->varName);
         char temp = getReg();

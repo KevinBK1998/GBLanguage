@@ -5,10 +5,60 @@ LD B, 0x0
 CP B
 JR NZ, WRITE_CHECK
 
-//read
+// READ
+LD D, 0x0
+READ_BUTTON_PRESS_LOOP:
+CALL WAIT_SECOND
+// read button press
+LD A, 0x20
+LD [HN], A, 0x0
+LD A, [HN], 0x0
+LD A, [HN], 0x0
+CPL
+AND 0xF
+SWAP A
+LD B, A
+// read dpad press
 LD A, 0x10
 LD [HN], A, 0x0
 LD A, [HN], 0x0
+LD A, [HN], 0x0
+LD A, [HN], 0x0
+LD A, [HN], 0x0
+LD A, [HN], 0x0
+LD A, [HN], 0x0
+CPL
+AND 0xF
+OR B
+LD B, A
+BIT 0, A
+JR Z, CHECK_B
+
+// handle A pressed
+PUSH AF
+LD A, 0x1
+ADD A, D
+DAA
+LD D, A
+POP AF
+JR CHECK_ST
+
+CHECK_B:
+BIT 1, A
+JR Z, CHECK_ST
+
+// handle B pressed
+PUSH AF
+LD A, 0xFF
+ADD A, D
+DAA
+LD D, A
+POP AF
+
+CHECK_ST:
+BIT 3, A
+JR Z, READ_BUTTON_PRESS_LOOP
+LD A, D
 JR LIB_END
 
 WRITE_CHECK:
@@ -136,7 +186,7 @@ RET
 CONVERT_TO_BCD_FUN:
 PUSH AF
 LD B, 0x10
-LD C, 0x0
+LD C, 0xFF
 
 A_0:
 INC C
@@ -177,4 +227,15 @@ JR STORE_LCDC
 
 SET_BIT_3:SET 3, A
 STORE_LCDC:LD [HN], A, 0x40
+RET
+
+WAIT_SECOND:
+LD A, 0x30
+WAIT_IN_LOOP:
+PUSH AF
+CALL WAIT_DRAW
+POP AF
+DEC A
+JR NZ, WAIT_IN_LOOP
+
 RET

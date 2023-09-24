@@ -63,7 +63,7 @@ Expression  : Expression PLUS Expression    {$$ = makeOperatorNode('+',$1,$3);}
 
 void yyerror(char const *s)
 {
-    printf("yyerror %s",s);
+    printf("\nERROR during parse : %s\n",s);
 }
 
 

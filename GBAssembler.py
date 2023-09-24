@@ -62,6 +62,8 @@ def ReadAllLabels(isLibrary=False):
             line+=3
         elif "JR" in x:
             line+=2
+        elif "BIT" in x or "RES" in x or "SET" in x or "SWAP" in x:
+            line+=2
         elif "PREFIX" in x:
             line+=2
         elif "DATA" in x:
@@ -80,27 +82,31 @@ src = open(src_file, "r")
 bin = open(dst_file, "wb")
 MAGIC_PREFIX = 0xCB
 assemblyMap = {
-    "NOP":0x00,             "LD BC, 0":0x01,        "INC BC":0x03,          "INC B":0x04,       "DEC B":0x05,       "LD B, 0":0x06,     "LD A, [BC]":0x0A,  "INC C":0x0C,   "DEC C":0x0D,   "LD C, 0":0x0E,
-    "LD DE, 0":0x11,        "INC DE":0x13,          "DEC D":0x15,           "LD D, 0":0x16,     "RL A":0x17,        "JR 0":0x18,        "LD A, [DE]":0x1A,  "DEC E":0x1D,   "LD E, 0":0x1E,
-    "JR NZ, 0":0x20,        "LD HL, 0":0x21,        "LDI [HL], A":0x22,     "INC HL":0x23,      "INC H":0x24,       "JR Z, 0":0x28,     "LD L, 0":0x2E,
-    "JR NC, 0":0x30,        "LD SP, 0":0x31,        "LDD [HL], A":0x32,     "DEC A":0x3D,       "LD A, 0":0x3E,
-    "LD B, B":0x40,         "LD B, A":0x47,         "LD C, B":0x48,         "LD C, C":0x49,     "LD C, D":0x4A,     "LD C, A":0x4F,
-    "LD D, A":0x57,
-    "LD H, A":0x67,
-    "HALT":0x76,            "LD [HL], A":0x77,      "LD A, B":0x78,         "LD A, C":0x79,     "LD A, E":0x7B,     "LD A, H":0x7C,     "LD A, L":0x7D,
-    "ADD A, B":0x80,        "ADD A, C":0x81,        "ADD A, [HL]":0x86,
-    "SUB A, B":0x90,        "SUB A, C":0x91,        "SUB A, D":0x92,
+    "NOP":0x00,             "LD BC, 0":0x01,    "INC BC":0x03,      "INC B":0x04,           "DEC B":0x05,       "LD B, 0":0x06, "LD A, [BC]":0x0A,  "INC C":0x0C,   "DEC C":0x0D,   "LD C, 0":0x0E,
+    "LD DE, 0":0x11,        "INC DE":0x13,      "DEC D":0x15,       "LD D, 0":0x16,         "RL A":0x17,        "JR 0":0x18,    "LD A, [DE]":0x1A,  "DEC E":0x1D,   "LD E, 0":0x1E,
+    "JR NZ, 0":0x20,        "LD HL, 0":0x21,    "LDI [HL], A":0x22, "INC HL":0x23,          "INC H":0x24,       "DAA":0x27,     "JR Z, 0":0x28,     "LD L, 0":0x2E,
+    "JR NC, 0":0x30,        "LD SP, 0":0x31,    "LDD [HL], A":0x32, "JR C, 0":0x38,         "DEC A":0x3D,       "LD A, 0":0x3E,
+    "LD B, B":0x40,         "LD B, A":0x47,     "LD C, B":0x48,     "LD C, C":0x49,         "LD C, D":0x4A,     "LD C, A":0x4F,
+    "LD D, B":0x50,         "LD D, A":0x57,
+    "LD H, A":0x67,         "LD L, A":0x6F,
+    "HALT":0x76,            "LD [HL], A":0x77,  "LD A, B":0x78,     "LD A, C":0x79,         "LD A, D":0x7A,     "LD A, E":0x7B, "LD A, H":0x7C,     "LD A, L":0x7D,
+    "ADD A, B":0x80,        "ADD A, C":0x81,    "ADD A, D":0x82,    "ADD A, L":0x85,        "ADD A, [HL]":0x86, 
+    "SUB A, B":0x90,        "SUB A, C":0x91,    "SUB A, D":0x92,
     "XOR A, A":0xAF,
     "CP B":0xB8,            "CP [HL]":0xBE,
-    "POP BC":0xC1,          "JP 0":0xC3,            "PUSH BC":0xC5,         "RET":0xC9,         "CALL 0":0xCD,      "ADC A, 0":0xCE,
+    "POP BC":0xC1,          "JP 0":0xC3,        "PUSH BC":0xC5,     "ADD A, 0":0xC6,        "RET":0xC9,         "CALL 0":0xCD,  "ADC A, 0":0xCE,
     "POP DE":0xD1,          "PUSH DE":0xD5,
-    "LD [HN], A, 0":0xE0,   "LD [HC], A":0xE2,      "LD [NN], A, 0":0xEA,
-    "LD A, [HN], 0":0xF0,   "POP AF":0xF1,   "LD A, [HC]":0xF2,      "PUSH AF":0xF5,      "CP 0":0xFE,
+    "LD [HN], A, 0":0xE0,   "LD [HC], A":0xE2,  "AND 0":0xE6,       "LD [NN], A, 0":0xEA,
+    "LD A, [HN], 0":0xF0,   "POP AF":0xF1,      "LD A, [HC]":0xF2,  "PUSH AF":0xF5,         "CP 0":0xFE,
 }
 
 specialAssemblyMap = {
     "RL C":0x11,
+    "SWAP A":0x37,
+    "BIT 3, A":0x5F,
     "BIT 7, H":0x7C,
+    "RES 3, A":0x9F,
+    "SET 3, A":0xDF,
 }
 
 def assemblerCodeGen(isLibrary=False):
@@ -109,6 +115,7 @@ def assemblerCodeGen(isLibrary=False):
         line = labelDict["LIBRARY"]
         print("BRKP :", hex(labelDict['BRKP']))
     else:
+        print("START :", hex(labelDict['START']))
         # padding for bios bytes
         while line < 0x101:
             bin.write(bytearray([0]))
@@ -204,6 +211,12 @@ def assemblerCodeGen(isLibrary=False):
                 # print(hex(n))
                 code = [opcode, n]
                 line+=2
+        elif "BIT" in x or "RES" in x or "SET" in x or "SWAP" in x:
+            instruction=x.split("\n")[0]
+            opcode = specialAssemblyMap[instruction]
+            # print(hex(MAGIC_PREFIX),hex(opcode))
+            code = [MAGIC_PREFIX, opcode]
+            line+=2
         elif "PREFIX" in x:
             instruction=x[7:].split("\n")[0]
             opcode = specialAssemblyMap[instruction]

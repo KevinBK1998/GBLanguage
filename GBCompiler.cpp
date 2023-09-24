@@ -141,13 +141,12 @@ char handleOperator(char* op, tnode* operand1, tnode* operand2){
         break;
     case '/':
         loadTOAccumulator(l);
-        clearRegister(l);
+        fprintf(target_file, "LD %c, 0xFF\n", l);
         tempLabel = getLabel();
         fprintf(target_file, "\n%s:\n", tempLabel);
         fprintf(target_file, "INC %c\n", l);
         fprintf(target_file, "SUB A, %c\n", r);
         fprintf(target_file, "JR NC, %s\n\n", tempLabel);
-        fprintf(target_file, "DEC %c\n", l);
         break;
     default:
         cout<<"Op:"<< op<< endl;

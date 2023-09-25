@@ -77,13 +77,17 @@ char handleIdentifierLVal(char *var){
     return temp;
 }
 
+void loadRegToReg(char from, char to){
+    loadTOAccumulator(from);
+    loadFROMAccumulator(to);
+}
+
 void readFromMemory(char address){
-    if(address>'C' && reg&0b100)
-        fprintf(target_file, "PUSH BC\n");
-    fprintf(target_file, "LD C, %c\n", address);
+    fprintf(target_file, "PUSH BC\n");
+    if(address!='C')
+        loadRegToReg(address, 'C');
     fprintf(target_file, "LD A, [HC]\n");
-    if(address>'C' && reg&0b100)
-        fprintf(target_file, "POP BC\n");
+    fprintf(target_file, "POP BC\n");
     fprintf(target_file, "LD %c, A\n", address);
 }
 
@@ -94,22 +98,35 @@ char handleIdentifier(tnode* var){
 }
 
 void writeToMemory(char address, char data){
-    if(address>'C' && reg&0b100)
-        fprintf(target_file, "PUSH BC\n");
-    fprintf(target_file, "LD A, %c\n", data);
-    if (address != 'C')
-        fprintf(target_file, "LD C, %c\n", address);
-    fprintf(target_file, "LD [HC], A\n");
-    if(address>'C' && reg&0b100)
-        fprintf(target_file, "POP BC\n");
-    freeReg(data);
+    fprintf(target_file, "PUSH BC\n");
+    fprintf(target_file, "PUSH DE\n");
     freeReg(address);
+    freeReg(data);
+    if (address != 'C'){
+        if (data =='C'){
+            loadRegToReg(data,'D');
+            data = 'D';
+        }
+        loadRegToReg(address,'C');
+    }
+    fprintf(target_file, "LD A, %c\n", data);
+    fprintf(target_file, "LD [HC], A\n");
+    fprintf(target_file, "POP DE\n");
+    fprintf(target_file, "POP BC\n");
 }
 
 void handleAssignment(tnode* left, tnode* right){
     char r = codeGen(right);
     char l = handleIdentifierLVal(left->varName);
     writeToMemory(l,r);
+}
+
+char* checkRegisterForZero(char tempReg){
+    clearAccumulator();
+    fprintf(target_file, "ADD A, %c\n", tempReg);
+    char* skipLabel=getLabel();
+    fprintf(target_file, "JR Z, %s\n\n", skipLabel);
+    return skipLabel;
 }
 
 char handleOperator(char* op, tnode* operand1, tnode* operand2){
@@ -129,10 +146,7 @@ char handleOperator(char* op, tnode* operand1, tnode* operand2){
         loadFROMAccumulator(l);
         break;
     case '*':
-        clearAccumulator();
-        fprintf(target_file, "ADD A, %c\n", r);
-        skipLoopLabel=getLabel();
-        fprintf(target_file, "JR Z, %s\n\n", skipLoopLabel);
+        skipLoopLabel=checkRegisterForZero(r);
         clearAccumulator();
         startLoopLabel=getLabel(); 
         fprintf(target_file, "\n%s:\n", startLoopLabel);
@@ -143,10 +157,7 @@ char handleOperator(char* op, tnode* operand1, tnode* operand2){
         loadFROMAccumulator(l);
         break;
     case '/':
-        clearAccumulator();
-        fprintf(target_file, "ADD A, %c\n", r);
-        skipLoopLabel=getLabel();
-        fprintf(target_file, "JR Z, %s\n\n", skipLoopLabel);
+        skipLoopLabel=checkRegisterForZero(r);
         loadTOAccumulator(l);
         fprintf(target_file, "LD %c, 0xFF\n", l);
         startLoopLabel = getLabel();
@@ -231,7 +242,7 @@ char handleOperator(char* op, tnode* operand1, tnode* operand2){
         fprintf(target_file, "\n%s:\n", skipLoopLabel);
         break;
     default:
-        cout<<"Op:"<< op<< endl;
+        cout<<"Undefined Operator : "<< op << endl;
         exit(-1);
     }
     freeReg(r);
@@ -252,8 +263,8 @@ void handleFunctionCalls(tnode* exp){
     if (exp->varName == "write"){
         char temp = codeGen(exp->left);
         fprintf(target_file, "//WRITE\n");
+        loadRegToReg(temp,'B');
         fprintf(target_file, "LD A, 0x%X\n", WRITE_CALL);
-        fprintf(target_file, "LD B, %c\n", temp);
         fprintf(target_file, "CALL LIBRARY\n");
         freeReg(temp);
     }
@@ -265,6 +276,28 @@ void handleFunctionCalls(tnode* exp){
         char temp = getReg();
         fprintf(target_file, "LD %c, A\n", temp);
         writeToMemory(add, temp);
+    }
+}
+
+void handleControlStatements(tnode* statement, char* elseLabel){
+    if (statement->varName == "if"){
+        char temp = codeGen(statement->left);
+        char* skipBlockLabel = checkRegisterForZero(temp);
+        if(statement->right->nodeType != CONTROL){
+            fprintf(target_file, "BRKP:");
+            codeGen(statement->right);
+            fprintf(target_file, "\n%s:\n", skipBlockLabel);
+        }
+        else
+            handleControlStatements(statement->right, skipBlockLabel);
+    }
+    else if(statement->varName == "else"){
+        codeGen(statement->left);
+        char* endIfLabel = getLabel();
+        fprintf(target_file, "JR %s\n", endIfLabel);
+        fprintf(target_file, "\n%s:\n", elseLabel);
+        codeGen(statement->right);
+        fprintf(target_file, "\n%s:\n", endIfLabel);
     }
 }
 
@@ -284,12 +317,15 @@ char codeGen(struct tnode *t){
     case FUNCTION_CALL:
         handleFunctionCalls(t);
         break;
+    case CONTROL:
+        handleControlStatements(t, NULL);
+        break;
     case CONNECTOR:
         codeGen(t->left);
         codeGen(t->right);
         break;
     default:
-    cout<<"Undefined:"<< t->varName<< endl;
+        cout<<"Undefined Node : "<< t->nodeType << " = '" <<t->varName << "'" << endl;
         exit(-1);
         break;
     }

@@ -16,8 +16,9 @@
     struct tnode *node;
 }
 
-%type <node> Program ListStatement Statement InputStatement OutputStatement ControlStatement AssignmentStatement Expression
-%token BLOCK_OPEN BLOCK_CLOSE P_OPEN P_CLOSE LT GT LE GE EQ NE IF ELSE READ WRITE PLUS MINUS MUL DIV 
+%type <node> Program ListStatement BlockStatement Statement InputStatement OutputStatement ControlStatement AssignmentStatement
+%type <node> Expression BooleanExpression
+%token BLOCK_OPEN BLOCK_CLOSE P_OPEN P_CLOSE LT GT LE GE EQ NE IF ELSE READ WRITE PLUS MINUS MUL DIV
 %token <node> ID NUM
 %left PLUS MINUS
 %left MUL DIV
@@ -34,12 +35,17 @@ Program : BLOCK_OPEN ListStatement BLOCK_CLOSE  {
         | BLOCK_OPEN BLOCK_CLOSE                {$$ = NULL;}
         ;
 
-ListStatement   : ListStatement Statement   {$$ = makeConnectorNode($1,$2);}
-                | Statement                 {$$ = $1;}
+BlockStatement  : BLOCK_OPEN ListStatement BLOCK_CLOSE  {$$ = $2;}
+                | Statement                             {$$ = $1;}
+                ;
+
+ListStatement   : ListStatement BlockStatement  {$$ = makeConnectorNode($1,$2);}
+                | BlockStatement                {$$ = $1;}
                 ;
 
 Statement   : InputStatement        {$$ = $1;}
             | OutputStatement       {$$ = $1;}
+            | ControlStatement      {$$ = $1;}
             | AssignmentStatement   {$$ = $1;}
             ;
 
@@ -49,16 +55,22 @@ InputStatement  : READ P_OPEN ID P_CLOSE ';'    {$$ = makeOperatorNode("read",$3
 OutputStatement : WRITE P_OPEN Expression P_CLOSE ';'   {$$ = makeOperatorNode("write",$3);}
                 ;
 
+ControlStatement    : IF P_OPEN BooleanExpression P_CLOSE BlockStatement ELSE BlockStatement   {$$ = makeControlNode("if", $3, makeControlNode("else", $5, $7));}
+                    | IF P_OPEN BooleanExpression P_CLOSE BlockStatement                       {$$ = makeControlNode("if", $3, $5);}
+                    ;
+
 AssignmentStatement : ID '=' Expression ';' {$$ = makeOperatorNode('=',$1,$3);}
                     ;
 
-Expression  : Expression EQ Expression      {$$ = makeOperatorNode('E',$1,$3);}
-            | Expression NE Expression      {$$ = makeOperatorNode('N',$1,$3);}
-            | Expression LE Expression      {$$ = makeOperatorNode('L',$1,$3);}
-            | Expression GE Expression      {$$ = makeOperatorNode('G',$1,$3);}
-            | Expression LT Expression      {$$ = makeOperatorNode('<',$1,$3);}
-            | Expression GT Expression      {$$ = makeOperatorNode('>',$1,$3);}
-            | Expression PLUS Expression    {$$ = makeOperatorNode('+',$1,$3);}
+BooleanExpression   : Expression EQ Expression  {$$ = makeOperatorNode('E',$1,$3);}
+                    | Expression NE Expression  {$$ = makeOperatorNode('N',$1,$3);}
+                    | Expression LE Expression  {$$ = makeOperatorNode('L',$1,$3);}
+                    | Expression GE Expression  {$$ = makeOperatorNode('G',$1,$3);}
+                    | Expression LT Expression  {$$ = makeOperatorNode('<',$1,$3);}
+                    | Expression GT Expression  {$$ = makeOperatorNode('>',$1,$3);}
+                    ;
+
+Expression  : Expression PLUS Expression    {$$ = makeOperatorNode('+',$1,$3);}
             | Expression MINUS Expression   {$$ = makeOperatorNode('-',$1,$3);}
             | Expression MUL Expression     {$$ = makeOperatorNode('*',$1,$3);}
             | Expression DIV Expression     {$$ = makeOperatorNode('/',$1,$3);}

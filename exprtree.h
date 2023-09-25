@@ -7,6 +7,7 @@ enum NodeType{
     ASSIGNMENT,
     OPERATOR,
     FUNCTION_CALL,
+    CONTROL,
     CONNECTOR,
 };
 
@@ -26,11 +27,17 @@ struct tnode* makeLeafNode(int n);
 // Make a leaf identifier node
 struct tnode* makeLeafNode(char* id);
 
-// Make an operator node with left and right branches
+// Make an unary operator node
+struct tnode* makeOperatorNode(char c, struct tnode *child);
+
+// Make a binary operator node
 struct tnode* makeOperatorNode(char c, struct tnode *l, struct tnode *r);
 
-// Make an operator node with single child
+// Make a function node with single child
 struct tnode* makeOperatorNode(char *c, struct tnode *child);
+
+// Make a control node with with left and right branches
+struct tnode* makeControlNode(char *c, struct tnode *l, struct tnode *r);
 
 // Make an operator node with left and right branches
 struct tnode* makeConnectorNode(struct tnode *l, struct tnode *r);

@@ -46,6 +46,16 @@ struct tnode* makeOperatorNode(char *c,struct tnode *child){
     return temp;
 }
 
+struct tnode* makeControlNode(char *c, struct tnode *l, struct tnode *r){
+    struct tnode *temp;
+    temp = (struct tnode*)malloc(sizeof(struct tnode));
+    temp->varName = c;
+    temp->nodeType = CONTROL;
+    temp->left = l;
+    temp->right = r;
+    return temp;
+}
+
 struct tnode* makeConnectorNode(struct tnode *l,struct tnode *r){
     struct tnode *temp;
     temp = (struct tnode*)malloc(sizeof(struct tnode));

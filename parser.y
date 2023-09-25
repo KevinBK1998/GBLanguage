@@ -1,6 +1,7 @@
 %{
     #include <iostream>
     #include <stdlib.h>
+    #include <string.h>
     #include "exprtree.h"
     #include "exprtree.cpp"
     #include "GBCompiler.h"
@@ -63,24 +64,27 @@ Expression  : Expression PLUS Expression    {$$ = makeOperatorNode('+',$1,$3);}
 
 void yyerror(char const *s)
 {
-    printf("\nERROR during parse : %s\n",s);
+    printf("\nERROR during parse : %s, Deleting temp file status: %d\n\n", s, remove("TEMP.gsm"));
 }
 
 
 
 int main(int argc, char* argv[]) {
+    char *name = "TEMP";
     if(argc > 1)
     {
         FILE *fp = fopen(argv[1], "r");
-        if(fp)
+        if(fp){
             yyin = fp;
+            name = argv[1];
+            name = strchr(name, '/') + 1;
+        }
     }
     target_file = fopen("TEMP.gsm","w+");
     int checksum = 0;
     int rom_reg_address = 0x134;
 
     // Store name of the program upto 11 char
-    char *name = "TEMP";
     int shortName = 0;
     for (int i=0; i<11; i++,rom_reg_address++){
         if (!shortName && name[i]=='\0')

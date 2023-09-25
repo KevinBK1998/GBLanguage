@@ -38,7 +38,6 @@ JR Z, CHECK_B
 PUSH AF
 LD A, 0x1
 ADD A, D
-DAA
 LD D, A
 LD B, A
 LD A, 0x1
@@ -48,13 +47,27 @@ JR CHECK_ST
 
 CHECK_B:
 BIT 1, A
-JR Z, CHECK_ST
+JR Z, CHECK_SE
 
 // handle B pressed
 PUSH AF
-LD A, 0xFF
-ADD A, D
-DAA
+LD A, D
+LD B, 0x1
+SUB A, B
+LD D, A
+LD B, A
+LD A, 0x1
+CALL LIBRARY
+POP AF
+
+CHECK_SE:
+BIT 2, A
+JR Z, CHECK_ST
+
+// handle SELECT pressed
+PUSH AF
+LD A, D
+RL A
 LD D, A
 LD B, A
 LD A, 0x1
@@ -64,6 +77,8 @@ POP AF
 CHECK_ST:
 BIT 3, A
 JR Z, READ_BUTTON_PRESS_LOOP
+
+// handle START pressed
 LD A, D
 LD B, A
 LD A, 0x1
@@ -97,11 +112,9 @@ LD D, B
 CALL GET_INACTIVE_BG_MAP_FUN
 // store in next line
 LD A, [HN], 0x9A
-LD E, 0x5
-A_2:
+SWAP A
+AND 0xF0
 RL A
-DEC E
-JR NZ, A_2
 ADD A, L
 LD L, A
 //LD A, 0x4F
@@ -206,29 +219,32 @@ RET
 
 CONVERT_TO_BCD_FUN:
 PUSH AF
-LD B, 0x10
-LD C, 0xFF
-
-A_0:
-INC C
-SUB A, B
-JR NC, A_0
-
+AND 0xF0
+LD B, A
 POP AF
 PUSH AF
-LD D, 0x6
-LD B, A
-LD A, 0x0
-
-A_1:
-ADD A, D
-DEC C
-JR NZ, A_1
-
+AND 0xF
+OR A
+DAA
+LD C, 0x16
+LD D, A
+SUB A, A
 ADD A, B
+JR Z, SKIP_A0
+
+LD A, D
+
+A_0:
+ADD A, C
 DAA
-DAA
-LD B, A
+DEC B
+JR NZ, A_0
+
+LD D, A
+
+SKIP_A0:
+LD A, D
+BRKP:LD B, A
 POP AF
 RET
 
@@ -251,7 +267,7 @@ STORE_LCDC:LD [HN], A, 0x40
 RET
 
 WAIT_SECOND:
-LD A, 0x40
+LD A, 0x20
 WAIT_IN_LOOP:
 PUSH AF
 CALL WAIT_DRAW

@@ -48,23 +48,20 @@ int freeReg(char regToBeFreed){
     return temp -'A';
 }
 
-int loadTOAccumulator(char load){
+void loadTOAccumulator(char load){
     fprintf(target_file, "LD A, %c\n", load);
-    return 0;
 }
 
-int clearRegister(char tempReg){
+void clearRegister(char tempReg){
     fprintf(target_file, "LD %c, 0x0\n", tempReg);
-    return 0;
 }
 
-int clearAccumulator(){
-    return clearRegister('A');
+void clearAccumulator(){
+    fprintf(target_file, "SUB A, A\n");
 }
 
-int loadFROMAccumulator(char load){
+void loadFROMAccumulator(char load){
     fprintf(target_file, "LD %c, A\n", load);
-    return 0;
 }
 
 char handleNumericLiteral(int literal){

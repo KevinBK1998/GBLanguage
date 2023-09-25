@@ -10,30 +10,40 @@
 %}
 
 %%
+"+"     {return PLUS;}
+"-"     {return MINUS;}
+"*"     {return MUL;}
+"/"     {return DIV;}
+"<"     {return LT;}
+">"     {return GT;}
+"<="    {return LE;}
+">="    {return GE;}
+"=="    {return EQ;}
+"!="    {return NE;}
+"{"     {return BLOCK_OPEN;}
+"}"     {return BLOCK_CLOSE;}
+"("     {return P_OPEN;}
+")"     {return P_CLOSE;}
+[=;]    {return *yytext;}
 
+"if"    {return IF;}
+"else"  {return ELSE;}
 "read"  {return READ;}
 "write" {return WRITE;}
+
+[ \t\n] {/*do nothing*/}
 
 [a-zA-Z][a-zA-Z0-9_]*   {
                             char* temp = strdup(yytext);
                             yylval.node = makeLeafNode(temp);
                             return ID;
                         }
+
 [0-9]+  {
             number = atoi(yytext);
             yylval.node = makeLeafNode(number);
             return NUM;
         }
-
-"+"     {return PLUS;}
-"-"     {return MINUS;}
-"*"     {return MUL;}
-"/"     {return DIV;}
-"{"     {return BLOCK_OPEN;}
-"}"     {return BLOCK_CLOSE;}
-
-[ \t\n] {/*do nothing*/}
-[()=;]  {return *yytext;}
 
 .       {yyerror("unknown character\n");exit(1);}
 

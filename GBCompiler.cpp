@@ -115,20 +115,12 @@ void handleAssignment(tnode* left, tnode* right){
 char handleOperator(char* op, tnode* operand1, tnode* operand2){
     char l = codeGen(operand1);
     char r = codeGen(operand2);
-    char* tempLabel;
+    char* startLoopLabel;
+    char* skipLoopLabel;
     switch(*(op)){
     case '+':
         loadTOAccumulator(l);
         fprintf(target_file, "ADD A, %c\n", r);
-        loadFROMAccumulator(l);
-        break;
-    case '*':
-        clearAccumulator();
-        tempLabel = getLabel();
-        fprintf(target_file, "\n%s:\n", tempLabel);
-        fprintf(target_file, "ADD A, %c\n", l);
-        fprintf(target_file, "DEC %c\n", r);
-        fprintf(target_file, "JR NZ, %s\n\n", tempLabel);
         loadFROMAccumulator(l);
         break;
     case '-':
@@ -136,14 +128,107 @@ char handleOperator(char* op, tnode* operand1, tnode* operand2){
         fprintf(target_file, "SUB A, %c\n", r);
         loadFROMAccumulator(l);
         break;
+    case '*':
+        clearAccumulator();
+        fprintf(target_file, "ADD A, %c\n", r);
+        skipLoopLabel=getLabel();
+        fprintf(target_file, "JR Z, %s\n\n", skipLoopLabel);
+        clearAccumulator();
+        startLoopLabel=getLabel(); 
+        fprintf(target_file, "\n%s:\n", startLoopLabel);
+        fprintf(target_file, "ADD A, %c\n", l);
+        fprintf(target_file, "DEC %c\n", r);
+        fprintf(target_file, "JR NZ, %s\n", startLoopLabel);
+        fprintf(target_file, "\n%s:\n", skipLoopLabel);
+        loadFROMAccumulator(l);
+        break;
     case '/':
+        clearAccumulator();
+        fprintf(target_file, "ADD A, %c\n", r);
+        skipLoopLabel=getLabel();
+        fprintf(target_file, "JR Z, %s\n\n", skipLoopLabel);
         loadTOAccumulator(l);
         fprintf(target_file, "LD %c, 0xFF\n", l);
-        tempLabel = getLabel();
-        fprintf(target_file, "\n%s:\n", tempLabel);
+        startLoopLabel = getLabel();
+        fprintf(target_file, "\n%s:\n", startLoopLabel);
         fprintf(target_file, "INC %c\n", l);
         fprintf(target_file, "SUB A, %c\n", r);
-        fprintf(target_file, "JR NC, %s\n\n", tempLabel);
+        fprintf(target_file, "JR NC, %s\n", startLoopLabel);
+        fprintf(target_file, "\n%s:\n", skipLoopLabel);
+        break;
+    case '>':
+        loadTOAccumulator(l);
+        fprintf(target_file, "CP %c\n", r);
+        startLoopLabel = getLabel();
+        fprintf(target_file, "JR NC, %s\n\n", startLoopLabel);
+        fprintf(target_file, "LD %c, 0x0\n", l);
+        skipLoopLabel = getLabel();
+        fprintf(target_file, "JR %s\n", skipLoopLabel);
+        fprintf(target_file, "\n%s:\n", startLoopLabel);
+        fprintf(target_file, "LD %c, 0x1\n", l);
+        fprintf(target_file, "\n%s:\n", skipLoopLabel);
+        break;
+    case '<':
+        loadTOAccumulator(l);
+        fprintf(target_file, "CP %c\n", r);
+        startLoopLabel = getLabel();
+        fprintf(target_file, "JR C, %s\n\n", startLoopLabel);
+        fprintf(target_file, "LD %c, 0x0\n", l);
+        skipLoopLabel = getLabel();
+        fprintf(target_file, "JR %s\n", skipLoopLabel);
+        fprintf(target_file, "\n%s:\n", startLoopLabel);
+        fprintf(target_file, "LD %c, 0x1\n", l);
+        fprintf(target_file, "\n%s:\n", skipLoopLabel);
+        break;
+    case 'G':
+        loadTOAccumulator(l);
+        fprintf(target_file, "CP %c\n", r);
+        startLoopLabel = getLabel();
+        fprintf(target_file, "JR NC, %s\n\n", startLoopLabel);
+        fprintf(target_file, "JR Z, %s\n\n", startLoopLabel);
+        fprintf(target_file, "LD %c, 0x0\n", l);
+        skipLoopLabel = getLabel();
+        fprintf(target_file, "JR %s\n", skipLoopLabel);
+        fprintf(target_file, "\n%s:\n", startLoopLabel);
+        fprintf(target_file, "LD %c, 0x1\n", l);
+        fprintf(target_file, "\n%s:\n", skipLoopLabel);
+        break;
+    case 'L':
+        loadTOAccumulator(l);
+        fprintf(target_file, "CP %c\n", r);
+        startLoopLabel = getLabel();
+        fprintf(target_file, "JR C, %s\n\n", startLoopLabel);
+        fprintf(target_file, "JR Z, %s\n\n", startLoopLabel);
+        fprintf(target_file, "LD %c, 0x0\n", l);
+        skipLoopLabel = getLabel();
+        fprintf(target_file, "JR %s\n", skipLoopLabel);
+        fprintf(target_file, "\n%s:\n", startLoopLabel);
+        fprintf(target_file, "LD %c, 0x1\n", l);
+        fprintf(target_file, "\n%s:\n", skipLoopLabel);
+        break;
+    case 'N':
+        loadTOAccumulator(l);
+        fprintf(target_file, "CP %c\n", r);
+        startLoopLabel = getLabel();
+        fprintf(target_file, "JR NZ, %s\n\n", startLoopLabel);
+        fprintf(target_file, "LD %c, 0x0\n", l);
+        skipLoopLabel = getLabel();
+        fprintf(target_file, "JR %s\n", skipLoopLabel);
+        fprintf(target_file, "\n%s:\n", startLoopLabel);
+        fprintf(target_file, "LD %c, 0x1\n", l);
+        fprintf(target_file, "\n%s:\n", skipLoopLabel);
+        break;
+    case 'E':
+        loadTOAccumulator(l);
+        fprintf(target_file, "CP %c\n", r);
+        startLoopLabel = getLabel();
+        fprintf(target_file, "JR Z, %s\n\n", startLoopLabel);
+        fprintf(target_file, "LD %c, 0x0\n", l);
+        skipLoopLabel = getLabel();
+        fprintf(target_file, "JR %s\n", skipLoopLabel);
+        fprintf(target_file, "\n%s:\n", startLoopLabel);
+        fprintf(target_file, "LD %c, 0x1\n", l);
+        fprintf(target_file, "\n%s:\n", skipLoopLabel);
         break;
     default:
         cout<<"Op:"<< op<< endl;

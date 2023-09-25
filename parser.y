@@ -16,12 +16,13 @@
     struct tnode *node;
 }
 
-%type <node> Program ListStatement Statement InputStatement OutputStatement AssignmentStatement Expression
-%token BLOCK_OPEN BLOCK_CLOSE PLUS MINUS MUL DIV READ WRITE
+%type <node> Program ListStatement Statement InputStatement OutputStatement ControlStatement AssignmentStatement Expression
+%token BLOCK_OPEN BLOCK_CLOSE P_OPEN P_CLOSE LT GT LE GE EQ NE IF ELSE READ WRITE PLUS MINUS MUL DIV 
 %token <node> ID NUM
 %left PLUS MINUS
 %left MUL DIV
-
+%nonassoc LT GT LE GE
+%nonassoc EQ NE
 %%
 
 Program : BLOCK_OPEN ListStatement BLOCK_CLOSE  {
@@ -42,20 +43,26 @@ Statement   : InputStatement        {$$ = $1;}
             | AssignmentStatement   {$$ = $1;}
             ;
 
-InputStatement  : READ '(' ID ')' ';'   {$$ = makeOperatorNode("read",$3);}
+InputStatement  : READ P_OPEN ID P_CLOSE ';'    {$$ = makeOperatorNode("read",$3);}
                 ;
 
-OutputStatement : WRITE '(' Expression ')' ';' {$$ = makeOperatorNode("write",$3);}
+OutputStatement : WRITE P_OPEN Expression P_CLOSE ';'   {$$ = makeOperatorNode("write",$3);}
                 ;
 
 AssignmentStatement : ID '=' Expression ';' {$$ = makeOperatorNode('=',$1,$3);}
                     ;
 
-Expression  : Expression PLUS Expression    {$$ = makeOperatorNode('+',$1,$3);}
+Expression  : Expression EQ Expression      {$$ = makeOperatorNode('E',$1,$3);}
+            | Expression NE Expression      {$$ = makeOperatorNode('N',$1,$3);}
+            | Expression LE Expression      {$$ = makeOperatorNode('L',$1,$3);}
+            | Expression GE Expression      {$$ = makeOperatorNode('G',$1,$3);}
+            | Expression LT Expression      {$$ = makeOperatorNode('<',$1,$3);}
+            | Expression GT Expression      {$$ = makeOperatorNode('>',$1,$3);}
+            | Expression PLUS Expression    {$$ = makeOperatorNode('+',$1,$3);}
             | Expression MINUS Expression   {$$ = makeOperatorNode('-',$1,$3);}
             | Expression MUL Expression     {$$ = makeOperatorNode('*',$1,$3);}
             | Expression DIV Expression     {$$ = makeOperatorNode('/',$1,$3);}
-            | '(' Expression ')'            {$$ = $2;}
+            | P_OPEN Expression P_CLOSE     {$$ = $2;}
             | ID                            {$$ = $1;}
             | NUM                           {$$ = $1;}
             ;

@@ -18,7 +18,7 @@
 
 %type <node> Program ListStatement BlockStatement Statement InputStatement OutputStatement ControlStatement AssignmentStatement
 %type <node> Expression BooleanExpression
-%token BLOCK_OPEN BLOCK_CLOSE P_OPEN P_CLOSE LT GT LE GE EQ NE IF ELSE READ WRITE PLUS MINUS MUL DIV
+%token BLOCK_OPEN BLOCK_CLOSE P_OPEN P_CLOSE LT GT LE GE EQ NE IF ELSE DO WHILE READ WRITE WRITE_LN PLUS MINUS MUL DIV
 %token <node> ID NUM
 %left PLUS MINUS
 %left MUL DIV
@@ -52,11 +52,14 @@ Statement   : InputStatement        {$$ = $1;}
 InputStatement  : READ P_OPEN ID P_CLOSE ';'    {$$ = makeOperatorNode("read",$3);}
                 ;
 
-OutputStatement : WRITE P_OPEN Expression P_CLOSE ';'   {$$ = makeOperatorNode("write",$3);}
+OutputStatement : WRITE P_OPEN Expression P_CLOSE ';'       {$$ = makeOperatorNode("write",$3);}
+                | WRITE_LN P_OPEN Expression P_CLOSE ';'    {$$ = makeOperatorNode("writeln",$3);}
                 ;
 
-ControlStatement    : IF P_OPEN BooleanExpression P_CLOSE BlockStatement ELSE BlockStatement   {$$ = makeControlNode("if", $3, makeControlNode("else", $5, $7));}
-                    | IF P_OPEN BooleanExpression P_CLOSE BlockStatement                       {$$ = makeControlNode("if", $3, $5);}
+ControlStatement    : IF P_OPEN BooleanExpression P_CLOSE BlockStatement                        {$$ = makeControlNode("if", $3, $5);}
+                    | IF P_OPEN BooleanExpression P_CLOSE BlockStatement ELSE BlockStatement    {$$ = makeControlNode("if", $3, makeControlNode("else", $5, $7));}
+                    | WHILE P_OPEN BooleanExpression P_CLOSE BlockStatement                     {$$ = makeControlNode("while", $3, $5);}
+                    | DO BlockStatement WHILE P_OPEN BooleanExpression P_CLOSE ';'              {$$ = makeControlNode("do-while", $2, $5);}
                     ;
 
 AssignmentStatement : ID '=' Expression ';' {$$ = makeOperatorNode('=',$1,$3);}

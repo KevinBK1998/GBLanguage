@@ -26,10 +26,13 @@
 ")"     {return P_CLOSE;}
 [=;]    {return *yytext;}
 
-"if"    {return IF;}
-"else"  {return ELSE;}
-"read"  {return READ;}
-"write" {return WRITE;}
+"if"        {return IF;}
+"else"      {return ELSE;}
+"do"        {return DO;}
+"while"     {return WHILE;}
+"read"      {return READ;}
+"write"     {return WRITE;}
+"writeln"   {return WRITE_LN;}
 
 [ \t\n] {/*do nothing*/}
 

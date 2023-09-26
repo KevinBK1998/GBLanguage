@@ -11,6 +11,13 @@ enum NodeType{
     CONNECTOR,
 };
 
+enum IO_TYPE{
+    READ_CALL,
+    WRITE_CALL,
+    WRITE_NL_CALL,
+    ASCII_LOAD,
+};
+
 typedef struct tnode{
     // value of the leaf node
     int val;

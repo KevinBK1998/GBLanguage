@@ -8,12 +8,6 @@ char label[] = "A_0";
 bool loadedAscii = false;
 FILE* target_file;
 
-enum FunctionType{
-    READ_CALL,
-    WRITE_CALL,
-    ASCII_LOAD,
-};
-
 char getReg(){
     int temp = reg;
     char freeReg = 'A';
@@ -282,19 +276,18 @@ void loadAsciiTable(){
 }
 
 void handleFunctionCalls(tnode* exp){
-
     loadAsciiTable();
-    if (exp->varName == "write"){
+    if (exp->varName == "write"||exp->varName == "writeln"){
         char temp = codeGen(exp->left);
         backup();
         fprintf(target_file, "//WRITE\n");
         loadRegToReg(temp,'B');
-        fprintf(target_file, "LD A, 0x%X\n", WRITE_CALL);
+        fprintf(target_file, "LD A, 0x%X\n", (exp->varName == "writeln")?WRITE_NL_CALL:WRITE_CALL);
         fprintf(target_file, "CALL LIBRARY\n");
         restore();
         freeReg(temp);
     }
-    else{
+    else if(exp->varName == "read"){
         backup();
         fprintf(target_file, "//READ\n");
         fprintf(target_file, "LD A, 0x%X\n", READ_CALL);
@@ -307,17 +300,16 @@ void handleFunctionCalls(tnode* exp){
     }
 }
 
-void handleControlStatements(tnode* statement, char* elseLabel){
+void handleIfControlStatements(tnode* statement, char* elseLabel){
     if (statement->varName == "if"){
         char temp = codeGen(statement->left);
         char* skipBlockLabel = checkRegisterForZero(temp);
         if(statement->right->nodeType != CONTROL){
-            fprintf(target_file, "BRKP:");
             codeGen(statement->right);
             fprintf(target_file, "\n%s:\n", skipBlockLabel);
         }
         else
-            handleControlStatements(statement->right, skipBlockLabel);
+            handleIfControlStatements(statement->right, skipBlockLabel);
     }
     else if(statement->varName == "else"){
         codeGen(statement->left);
@@ -329,8 +321,23 @@ void handleControlStatements(tnode* statement, char* elseLabel){
     }
 }
 
+void handleControlStatements(tnode* statement){
+    if (statement->varName == "if")
+        handleIfControlStatements(statement, NULL);
+    else if(statement->varName == "while")
+    {
+        char* loopLabel = getLabel();
+        fprintf(target_file, "\n%s:\n", loopLabel);
+        char temp = codeGen(statement->left);
+        char* skipLoopLabel = checkRegisterForZero(temp);
+        fprintf(target_file, "BRKP:");
+        codeGen(statement->right);
+        fprintf(target_file, "JR %s\n", loopLabel);
+        fprintf(target_file, "\n%s:\n", skipLoopLabel);
+    }
+}
+
 char codeGen(struct tnode *t){
-    // cout<< t->nodeType << endl;
     switch (t->nodeType)
     {
     case NUMERIC_LITERAL:
@@ -346,7 +353,7 @@ char codeGen(struct tnode *t){
         handleFunctionCalls(t);
         break;
     case CONTROL:
-        handleControlStatements(t, NULL);
+        handleControlStatements(t);
         break;
     case CONNECTOR:
         codeGen(t->left);

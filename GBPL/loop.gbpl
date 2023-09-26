@@ -1,0 +1,6 @@
+{
+    read(b);
+    a=0;
+    while (a < b)
+        write(a);
+}

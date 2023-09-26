@@ -63,7 +63,11 @@ def ReadAllLabels(isLibrary=False):
             line+=3
         elif "JR" in x:
             line+=2
-        elif "BIT" in x or "RES" in x or "SET" in x or "SWAP" in x:
+        elif "SLA" in x or "SRA" in x:
+            line+=2
+        elif "RL A"in x or "RR A"in x:
+            line+=1
+        elif "BIT" in x or "RES" in x or "SET" in x or "SWAP" in x or "RR" in x:
             line+=2
         elif "PREFIX" in x:
             line+=2
@@ -83,7 +87,7 @@ src = open(src_file, "r")
 bin = open(dst_file, "wb")
 MAGIC_PREFIX = 0xCB
 assemblyMap = {
-    "NOP":0x00,             "LD BC, 0":0x01,    "INC BC":0x03,      "INC B":0x04,       "DEC B":0x05,       "LD B, 0":0x06,         "LD A, [BC]":0x0A,  "INC C":0x0C,   "DEC C":0x0D,   "LD C, 0":0x0E,
+    "NOP":0x00,             "LD BC, 0":0x01,    "INC BC":0x03,      "INC B":0x04,       "DEC B":0x05,       "LD B, 0":0x06,         "ADD HL, BC":0x09,  "LD A, [BC]":0x0A,  "INC C":0x0C,   "DEC C":0x0D,   "LD C, 0":0x0E,
     "LD DE, 0":0x11,        "INC DE":0x13,      "DEC D":0x15,       "LD D, 0":0x16,     "RL A":0x17,        "JR 0":0x18,            "LD A, [DE]":0x1A,  "DEC E":0x1D,   "LD E, 0":0x1E, "RR A":0x1F,
     "JR NZ, 0":0x20,        "LD HL, 0":0x21,    "LDI [HL], A":0x22, "INC HL":0x23,      "INC H":0x24,       "DAA":0x27,             "JR Z, 0":0x28,     "LD L, 0":0x2E, "CPL":0x2F,
     "JR NC, 0":0x30,        "LD SP, 0":0x31,    "LDD [HL], A":0x32, "JR C, 0":0x38,     "INC A":0x3C,       "DEC A":0x3D,           "LD A, 0":0x3E,
@@ -102,7 +106,8 @@ assemblyMap = {
 }
 
 specialAssemblyMap = {
-    "RL C":0x11,
+    "RL C":0x11,"RR B":0x18,"RR C":0x19,
+    "SLA A":0x27,"SRA B":0x28,"SRA A":0x2F,
     "SWAP A":0x37,
     "BIT 0, A":0x47,"BIT 1, A":0x4F,
     "BIT 2, A":0x57,"BIT 3, A":0x5F,
@@ -214,14 +219,20 @@ def assemblerCodeGen(isLibrary=False):
                 # print(hex(n))
                 code = [opcode, n]
                 line+=2
-        elif "BIT" in x or "RES" in x or "SET" in x or "SWAP" in x:
+        elif "SLA" in x or "SRA" in x:
             instruction=x.split("\n")[0]
             opcode = specialAssemblyMap[instruction]
             # print(hex(MAGIC_PREFIX),hex(opcode))
             code = [MAGIC_PREFIX, opcode]
             line+=2
-        elif "PREFIX" in x:
-            instruction=x[7:].split("\n")[0]
+        elif "RL A"in x or "RR A"in x:
+            instruction=x.split("\n")[0]
+            opcode = assemblyMap[instruction]
+            # print(hex(opcode))
+            code = [opcode]
+            line+=1
+        elif "BIT" in x or "RES" in x or "SET" in x or "SWAP" in x or "RR" in x:
+            instruction=x.split("\n")[0]
             opcode = specialAssemblyMap[instruction]
             # print(hex(MAGIC_PREFIX),hex(opcode))
             code = [MAGIC_PREFIX, opcode]

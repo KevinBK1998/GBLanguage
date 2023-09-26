@@ -136,12 +136,18 @@ void handleAssignment(tnode* left, tnode* right){
     writeToMemory(l,r);
 }
 
-char* checkRegisterForZero(char tempReg){
+char* checkRegisterForFalse(char tempReg){
     clearAccumulator();
     fprintf(target_file, "ADD A, %c\n", tempReg);
     char* skipLabel=getLabel();
     fprintf(target_file, "JR Z, %s\n\n", skipLabel);
     return skipLabel;
+}
+
+void checkRegisterForTrue(char tempReg, char* jmpLabel){
+    clearAccumulator();
+    fprintf(target_file, "ADD A, %c\n", tempReg);
+    fprintf(target_file, "JR NZ, %s\n\n", jmpLabel);
 }
 
 char handleOperator(char* op, tnode* operand1, tnode* operand2){
@@ -161,7 +167,7 @@ char handleOperator(char* op, tnode* operand1, tnode* operand2){
         loadFROMAccumulator(l);
         break;
     case '*':
-        skipLoopLabel=checkRegisterForZero(r);
+        skipLoopLabel=checkRegisterForFalse(r);
         clearAccumulator();
         startLoopLabel=getLabel(); 
         fprintf(target_file, "\n%s:\n", startLoopLabel);
@@ -172,7 +178,7 @@ char handleOperator(char* op, tnode* operand1, tnode* operand2){
         loadFROMAccumulator(l);
         break;
     case '/':
-        skipLoopLabel=checkRegisterForZero(r);
+        skipLoopLabel=checkRegisterForFalse(r);
         loadTOAccumulator(l);
         fprintf(target_file, "LD %c, 0xFF\n", l);
         startLoopLabel = getLabel();
@@ -303,7 +309,7 @@ void handleFunctionCalls(tnode* exp){
 void handleIfControlStatements(tnode* statement, char* elseLabel){
     if (statement->varName == "if"){
         char temp = codeGen(statement->left);
-        char* skipBlockLabel = checkRegisterForZero(temp);
+        char* skipBlockLabel = checkRegisterForFalse(temp);
         if(statement->right->nodeType != CONTROL){
             codeGen(statement->right);
             fprintf(target_file, "\n%s:\n", skipBlockLabel);
@@ -329,11 +335,18 @@ void handleControlStatements(tnode* statement){
         char* loopLabel = getLabel();
         fprintf(target_file, "\n%s:\n", loopLabel);
         char temp = codeGen(statement->left);
-        char* skipLoopLabel = checkRegisterForZero(temp);
-        fprintf(target_file, "BRKP:");
+        char* skipLoopLabel = checkRegisterForFalse(temp);
         codeGen(statement->right);
         fprintf(target_file, "JR %s\n", loopLabel);
         fprintf(target_file, "\n%s:\n", skipLoopLabel);
+    }
+    else if(statement->varName == "do-while")
+    {
+        char* loopLabel = getLabel();
+        fprintf(target_file, "\n%s:\n", loopLabel);
+        codeGen(statement->left);
+        char temp = codeGen(statement->right);
+        checkRegisterForTrue(temp, loopLabel);
     }
 }
 

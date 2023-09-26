@@ -181,8 +181,18 @@ JR NZ, WAIT_IN_LOOP
 RET
 
 INC_LINE_FUN:
+PUSH BC
 LD A, [HN], 0x9A
-INC A
+LD L, A
+LD A, [HN], 0x9B
+LD H, A
+LD C, 0x20
+LD B, 0x0
+ADD HL, BC
+POP BC
+LD A, H
+LD [HN], A, 0x9B
+LD A, L
 LD [HN], A, 0x9A
 LD HL, 0xFE00
 // Next line is 0xN0 + 0x10
@@ -336,11 +346,24 @@ LD D, B
 CALL GET_INACTIVE_BG_MAP_FUN
 // store in next line
 LD A, [HN], 0x9A
-SWAP A
-AND 0xF0
-RL A
-ADD A, L
-LD L, A
+LD C, A
+LD A, [HN], 0x9B
+LD B, A
+ADD HL, BC
+BRKP:
+LD A, B
+SUB A, 0x2
+JR C, SKIP_SCROLLUP
+
+LD A, C
+SUB A, 0x20
+JR C, SKIP_SCROLLUP
+
+LD A, [HN], 0x42
+ADD A, 0x6
+LD [HN], A, 0x42
+
+SKIP_SCROLLUP:
 LD A, D
 CALL CONVERT_TO_BCD_FUN
 // B stores BCD equivalent

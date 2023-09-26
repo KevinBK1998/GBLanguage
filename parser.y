@@ -26,13 +26,8 @@
 %nonassoc EQ NE
 %%
 
-Program : BLOCK_OPEN ListStatement BLOCK_CLOSE  {
-                                                    $$ = $2;
-                                                    codeGen($2);
-                                                    fprintf(target_file, "HALT");
-                                                    exit(0);
-                                                }
-        | BLOCK_OPEN BLOCK_CLOSE                {$$ = NULL;}
+Program : BLOCK_OPEN ListStatement BLOCK_CLOSE  {codeGen($2);}
+        | BLOCK_OPEN BLOCK_CLOSE                { $$ = NULL; }
         ;
 
 BlockStatement  : BLOCK_OPEN ListStatement BLOCK_CLOSE  {$$ = $2;}
@@ -127,6 +122,7 @@ int main(int argc, char* argv[]) {
     // Start of user program
     fprintf(target_file, "\nSTART:\n");
     yyparse();
+    fprintf(target_file, "HALT");
     fclose(target_file);
     return 0;
 }

@@ -5,86 +5,7 @@ LD B, 0x0
 CP B
 JR NZ, WRITE_CHECK
 
-// READ
-LD D, 0x0
-READ_BUTTON_PRESS_LOOP:
-CALL WAIT_SECOND
-// read button press
-LD A, 0x20
-LD [HN], A, 0x0
-LD A, [HN], 0x0
-LD A, [HN], 0x0
-CPL
-AND 0xF
-SWAP A
-LD B, A
-// read dpad press
-LD A, 0x10
-LD [HN], A, 0x0
-LD A, [HN], 0x0
-LD A, [HN], 0x0
-LD A, [HN], 0x0
-LD A, [HN], 0x0
-LD A, [HN], 0x0
-LD A, [HN], 0x0
-CPL
-AND 0xF
-OR B
-LD B, A
-BIT 0, A
-JR Z, CHECK_B
-
-// handle A pressed
-PUSH AF
-LD A, 0x1
-ADD A, D
-LD D, A
-LD B, A
-LD A, 0x1
-CALL LIBRARY
-POP AF
-JR CHECK_ST
-
-CHECK_B:
-BIT 1, A
-JR Z, CHECK_SE
-
-// handle B pressed
-PUSH AF
-LD A, D
-LD B, 0x1
-SUB A, B
-LD D, A
-LD B, A
-LD A, 0x1
-CALL LIBRARY
-POP AF
-
-CHECK_SE:
-BIT 2, A
-JR Z, CHECK_ST
-
-// handle SELECT pressed
-PUSH AF
-LD A, D
-RL A
-LD D, A
-LD B, A
-LD A, 0x1
-CALL LIBRARY
-POP AF
-
-CHECK_ST:
-BIT 3, A
-JR Z, READ_BUTTON_PRESS_LOOP
-
-// handle START pressed
-LD A, D
-LD B, A
-LD A, 0x1
-CALL LIBRARY
-CALL INC_LINE_FUN
-LD A, D
+CALL READ_FUN
 JR LIB_END
 
 WRITE_CHECK:
@@ -167,6 +88,7 @@ LD HL, 0x9C00
 LD BC, 0x134
 LD D, 0xB
 CALL COPY_BC_TO_HL_LOOP
+CALL LOAD_BLINKING_CURSOR
 CALL INC_LINE_FUN
 // turn on display
 LD A, 0x99
@@ -244,7 +166,7 @@ LD D, A
 
 SKIP_A0:
 LD A, D
-BRKP:LD B, A
+LD B, A
 POP AF
 RET
 
@@ -260,10 +182,10 @@ BIT 3, A
 JR Z, SET_BIT_3
 
 RES 3, A
-JR STORE_LCDC
+JR STORE_LCDC_BG
 
 SET_BIT_3:SET 3, A
-STORE_LCDC:LD [HN], A, 0x40
+STORE_LCDC_BG:LD [HN], A, 0x40
 RET
 
 WAIT_SECOND:
@@ -277,7 +199,143 @@ JR NZ, WAIT_IN_LOOP
 RET
 
 INC_LINE_FUN:
+BRKP:
 LD A, [HN], 0x9A
 INC A
 LD [HN], A, 0x9A
+LD HL, 0xFE00
+// Next line is 0xN0 + 0x10
+SWAP A
+RR A
+ADD A, 0x10
+LD [HL], A
+RET
+
+LOAD_BLINKING_CURSOR:
+LD HL, 0xFE00
+LD A, 0x10
+LDI [HL], A
+LD A, 0x8
+LDI [HL], A
+LD A, 0x5F
+LDI [HL], A
+SUB A, A
+LDI [HL], A
+CALL TURN_OFF_SPRITES
+RET
+
+INC_COL_FUN:
+LD HL, 0xFE01
+// Leave 2 spaces 0x10 + 8
+LD A, 0x18
+LD [HL], A
+RET
+
+TURN_OFF_SPRITES:
+LD A, [HN], 0x40
+RES 1, A
+LD [HN], A, 0x40
+RET
+
+BLINK_CURSOR:
+LD A, [HN], 0x40
+BIT 1, A
+JR Z, SET_BIT_1
+
+RES 1, A
+JR STORE_LCDC_SP
+
+SET_BIT_1:SET 1, A
+STORE_LCDC_SP:LD [HN], A, 0x40
+RET
+
+READ_FUN:
+// C stores the input
+LD C, 0x0
+// set cursor at (0, line)
+LD A, 0x8
+LD HL, 0xFE01
+LD [HL], A
+
+READ_BUTTON_PRESS_LOOP:
+CALL BLINK_CURSOR
+CALL WAIT_SECOND
+// read button press
+LD A, 0x20
+LD [HN], A, 0x0
+LD A, [HN], 0x0
+CPL
+AND 0xF
+SWAP A
+LD B, A
+// read dpad press
+LD A, 0x10
+LD [HN], A, 0x0
+LD A, [HN], 0x0
+CPL
+AND 0xF
+OR B
+// B stores button press
+LD B, A
+BIT 0, A
+JR Z, CHECK_B
+
+// handle A pressed
+PUSH AF
+LD A, 0x1
+ADD A, C
+LD C, A
+CALL INC_COL_FUN
+LD A, C
+LD B, A
+LD A, 0x1
+CALL LIBRARY
+POP AF
+JR CHECK_ST
+
+CHECK_B:
+BIT 1, A
+JR Z, CHECK_SE
+
+// handle B pressed
+PUSH AF
+LD A, C
+LD B, 0x1
+SUB A, B
+LD C, A
+CALL INC_COL_FUN
+LD A, C
+LD B, A
+LD A, 0x1
+CALL LIBRARY
+POP AF
+
+CHECK_SE:
+BIT 2, A
+JR Z, CHECK_ST
+
+// handle SELECT pressed
+PUSH AF
+LD A, C
+RL A
+LD C, A
+CALL INC_COL_FUN
+LD A, C
+LD B, A
+LD A, 0x1
+CALL LIBRARY
+POP AF
+
+CHECK_ST:
+BIT 3, A
+JR Z, READ_BUTTON_PRESS_LOOP
+
+// handle START pressed
+LD A, C
+LD B, A
+LD A, 0x1
+CALL LIBRARY
+CALL INC_LINE_FUN
+CALL TURN_OFF_SPRITES
+LD A, C
 RET

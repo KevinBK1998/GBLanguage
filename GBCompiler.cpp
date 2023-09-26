@@ -3,7 +3,7 @@
 #include "exprtree.h"
 using namespace std;
 
-char reg = 0;
+char reg = 0x20;
 char label[] = "A_0";
 bool loadedAscii = false;
 FILE* target_file;
@@ -82,26 +82,48 @@ void loadRegToReg(char from, char to){
     loadFROMAccumulator(to);
 }
 
-void readFromMemory(char address){
-    fprintf(target_file, "PUSH BC\n");
-    if(address!='C')
+void backup(){
+    if(reg & 0b110)
+        fprintf(target_file, "PUSH BC\n");
+    if(reg & 0b11000)
+        fprintf(target_file, "PUSH DE\n");
+    if(reg & 0b11000000)
+        fprintf(target_file, "PUSH HL\n");
+}
+
+void restore(){
+    if(reg & 0b11000000)
+        fprintf(target_file, "POP HL\n");
+    if(reg & 0b11000)
+        fprintf(target_file, "POP DE\n");
+    if(reg & 0b110)
+        fprintf(target_file, "POP BC\n");
+}
+
+char readFromMemory(char address){
+    if(address!='C') {
+        freeReg(address);
+        backup();
         loadRegToReg(address, 'C');
+    }
     fprintf(target_file, "LD A, [HC]\n");
-    fprintf(target_file, "POP BC\n");
+    if(address!='C')
+        restore();
+    address=getReg();
     fprintf(target_file, "LD %c, A\n", address);
+    return address;
 }
 
 char handleIdentifier(tnode* var){
     char temp = handleIdentifierLVal(var->varName);
-    readFromMemory(temp);
+    temp = readFromMemory(temp);
     return temp;
 }
 
 void writeToMemory(char address, char data){
-    fprintf(target_file, "PUSH BC\n");
-    fprintf(target_file, "PUSH DE\n");
     freeReg(address);
     freeReg(data);
+    backup();
     if (address != 'C'){
         if (data =='C'){
             loadRegToReg(data,'D');
@@ -111,8 +133,7 @@ void writeToMemory(char address, char data){
     }
     fprintf(target_file, "LD A, %c\n", data);
     fprintf(target_file, "LD [HC], A\n");
-    fprintf(target_file, "POP DE\n");
-    fprintf(target_file, "POP BC\n");
+    restore();
 }
 
 void handleAssignment(tnode* left, tnode* right){
@@ -252,26 +273,33 @@ char handleOperator(char* op, tnode* operand1, tnode* operand2){
 void loadAsciiTable(){
     if (loadedAscii)
         return;
+    backup();
     fprintf(target_file, "//LOAD ASCII\n");
     fprintf(target_file, "LD A, 0x%X\n", ASCII_LOAD);
     fprintf(target_file, "CALL LIBRARY\n");
+    restore();
     loadedAscii = true;
 }
 
 void handleFunctionCalls(tnode* exp){
+
     loadAsciiTable();
     if (exp->varName == "write"){
         char temp = codeGen(exp->left);
+        backup();
         fprintf(target_file, "//WRITE\n");
         loadRegToReg(temp,'B');
         fprintf(target_file, "LD A, 0x%X\n", WRITE_CALL);
         fprintf(target_file, "CALL LIBRARY\n");
+        restore();
         freeReg(temp);
     }
     else{
+        backup();
         fprintf(target_file, "//READ\n");
         fprintf(target_file, "LD A, 0x%X\n", READ_CALL);
         fprintf(target_file, "CALL LIBRARY\n");
+        restore();
         char add = handleIdentifierLVal(exp->left->varName);
         char temp = getReg();
         fprintf(target_file, "LD %c, A\n", temp);

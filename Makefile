@@ -1,13 +1,13 @@
 copy: TEMP.gb
-	cp TEMP.gb ~/GBemu
+	cp TEMP.gb ~/GBemu || echo `echo "\nFAILED to copy\n" && rm ~/GBemu/TEMP.gb`
 TEMP.gb: GBAssembler.py TEMP.gsm library.gb
 	python3 GBAssembler.py
-TEMP.gsm: in2post.exe GBPL/work.gbpl
-	./in2post.exe GBPL/work.gbpl
+TEMP.gsm: compiler.exe GBPL/work.gbpl
+	./compiler.exe GBPL/work.gbpl
 library.gb: GBAssembler.py library.gsm
 	python3 GBAssembler.py library
-in2post.exe: y.tab.c lex.yy.c GBCompiler.cpp exprtree.cpp
-	g++ y.tab.c lex.yy.c -o in2post.exe
+compiler.exe: y.tab.c lex.yy.c GBCompiler.cpp exprtree.cpp
+	g++ y.tab.c lex.yy.c -o compiler.exe
 lex.yy.c: tokenizer.l
 	lex $<
 y.tab.c: parser.y

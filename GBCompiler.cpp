@@ -1,6 +1,6 @@
 #include <iostream>
 #include <string.h>
-#include "exprtree.h"
+#include "ASTree.h"
 using namespace std;
 
 char reg = 0x20;
@@ -361,32 +361,33 @@ void handleControlStatements(tnode* statement, LoopLabel loopLabelDetails){
 }
 
 char GenerateCode(struct tnode *t, LoopLabel loopLabelDetails){
-    switch (t->nodeType)
-    {
-    case NUMERIC_LITERAL:
-        return handleNumericLiteral(t->val);
-    case IDENTIFIER:
-        return handleIdentifier(t);
-    case ASSIGNMENT:
-        handleAssignment(t->left, t->right);
-        break;
-    case OPERATOR:
-        return handleOperator(t->varName, t->left, t->right);
-    case FUNCTION_CALL:
-        handleFunctionCalls(t);
-        break;
-    case CONTROL:
-        handleControlStatements(t, loopLabelDetails);
-        break;
-    case CONNECTOR:
-        GenerateCode(t->left, loopLabelDetails);
-        GenerateCode(t->right, loopLabelDetails);
-        break;
-    default:
-        cout<<"Undefined Node : "<< t->nodeType << " = '" <<t->varName << "'" << endl;
-        exit(-1);
-        break;
-    }
+    if (t!=NULL)
+        switch (t->nodeType)
+        {
+        case NUMERIC_LITERAL:
+            return handleNumericLiteral(t->val);
+        case IDENTIFIER:
+            return handleIdentifier(t);
+        case ASSIGNMENT:
+            handleAssignment(t->left, t->right);
+            break;
+        case OPERATOR:
+            return handleOperator(t->varName, t->left, t->right);
+        case FUNCTION_CALL:
+            handleFunctionCalls(t);
+            break;
+        case CONTROL:
+            handleControlStatements(t, loopLabelDetails);
+            break;
+        case CONNECTOR:
+            GenerateCode(t->left, loopLabelDetails);
+            GenerateCode(t->right, loopLabelDetails);
+            break;
+        default:
+            cout<<"Undefined Node : "<< t->nodeType << " = '" <<t->varName << "'" << endl;
+            exit(-1);
+            break;
+        }
     return 0;
 }
 

@@ -1,5 +1,5 @@
 #include <cstdlib>
-#include "exprtree.h"
+#include "ASTree.h"
 struct tnode* makeLeafNode(int n)
 {
     struct tnode *temp;
@@ -18,6 +18,18 @@ struct tnode* makeLeafNode(char* id)
     temp = (struct tnode*)malloc(sizeof(struct tnode));
     temp->varName = id;
     temp->nodeType = IDENTIFIER;
+    temp->left = NULL;
+    temp->right = NULL;
+    return temp;
+}
+
+struct tnode* makeDataTypeNode(DataType dt)
+{
+    struct tnode *temp;
+    temp = (struct tnode*)malloc(sizeof(struct tnode));
+    temp->varName = NULL;
+    temp->nodeType = IDENTIFIER;
+    temp->dataType = dt;
     temp->left = NULL;
     temp->right = NULL;
     return temp;

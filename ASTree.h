@@ -1,5 +1,5 @@
-#ifndef EXPR_TREE_H
-#define EXPR_TREE_H
+#ifndef ASTREE_H
+#define ASTREE_H
 
 enum NodeType{
     NUMERIC_LITERAL,
@@ -9,6 +9,10 @@ enum NodeType{
     FUNCTION_CALL,
     CONTROL,
     CONNECTOR,
+};
+
+enum DataType{
+    BYTE_TYPE,
 };
 
 enum IO_TYPE{
@@ -25,6 +29,7 @@ typedef struct tnode{
     char* varName;
     // type of node
     NodeType nodeType;
+    DataType dataType;
     struct tnode *left,*right; //left and right branches
 } tnode;
 
@@ -40,6 +45,9 @@ struct tnode* makeLeafNode(int n);
 // Make a leaf identifier node
 struct tnode* makeLeafNode(char* id);
 
+// Make a data type leaf node
+struct tnode* makeDataTypeNode(DataType);
+
 // Make an unary operator node
 struct tnode* makeOperatorNode(char c, struct tnode *child);
 
@@ -49,7 +57,7 @@ struct tnode* makeOperatorNode(char c, struct tnode *l, struct tnode *r);
 // Make a function node with single child
 struct tnode* makeOperatorNode(char *c, struct tnode *child);
 
-// Make a control node with with no branches
+// Make a control leaf node
 struct tnode* makeControlNode(char *c);
 
 // Make a control node with with left and right branches

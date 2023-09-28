@@ -3,7 +3,7 @@
     #include <string.h>
     #include <stdio.h>
     #include "y.tab.h"
-    #include "exprtree.h"
+    #include "ASTree.h"
 
     int number;
     extern void yyerror(char const *s);
@@ -24,7 +24,7 @@
 "}"     {return BLOCK_CLOSE;}
 "("     {return P_OPEN;}
 ")"     {return P_CLOSE;}
-[=;]    {return *yytext;}
+[=;,]   {return *yytext;}
 
 "if"        {return IF;}
 "else"      {return ELSE;}
@@ -32,6 +32,7 @@
 "while"     {return WHILE;}
 "break"     {return BREAK;}
 "continue"  {return CONTINUE;}
+"byte"      {return BYTE;}
 "read"      {return READ;}
 "write"     {return WRITE;}
 "writeln"   {return WRITE_LN;}

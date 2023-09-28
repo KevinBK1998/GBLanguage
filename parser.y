@@ -2,8 +2,8 @@
     #include <iostream>
     #include <stdlib.h>
     #include <string.h>
-    #include "exprtree.h"
-    #include "exprtree.cpp"
+    #include "ASTree.h"
+    #include "ASTree.cpp"
     #include "GBCompiler.h"
     #include "GBCompiler.cpp"
     using namespace std;
@@ -17,8 +17,9 @@
 }
 
 %type <node> Program ListStatement BlockStatement Statement InputStatement OutputStatement ControlStatement AssignmentStatement
-%type <node> Expression BooleanExpression
-%token BLOCK_OPEN BLOCK_CLOSE P_OPEN P_CLOSE LT GT LE GE EQ NE IF ELSE DO WHILE BREAK CONTINUE READ WRITE WRITE_LN PLUS MINUS MUL DIV
+%type <node> Expression BooleanExpression VariableList Type
+%token BLOCK_OPEN BLOCK_CLOSE P_OPEN P_CLOSE IF ELSE DO WHILE BREAK CONTINUE READ WRITE WRITE_LN BYTE
+%token LT GT LE GE EQ NE PLUS MINUS MUL DIV
 %token <node> ID NUM
 %left PLUS MINUS
 %left MUL DIV
@@ -38,13 +39,24 @@ ListStatement   : ListStatement BlockStatement  {$$ = makeConnectorNode($1,$2);}
                 | BlockStatement                {$$ = $1;}
                 ;
 
-Statement   : InputStatement        {$$ = $1;}
+Statement   : DeclareStatement      {$$=NULL;}
+            | InputStatement        {$$ = $1;}
             | OutputStatement       {$$ = $1;}
             | ControlStatement      {$$ = $1;}
             | AssignmentStatement   {$$ = $1;}
             | BREAK ';'             {$$ = makeControlNode("break");}
             | CONTINUE ';'          {$$ = makeControlNode("continue");}
             ;
+
+DeclareStatement    : Type VariableList ';' {Install()}
+                    ;
+
+Type    : BYTE  {$$=makeDataTypeNode(BYTE_TYPE);}
+        ;
+
+VariableList    : VariableList ',' ID   {$$=makeConnectorNode($1,$3);}
+                | ID                    {$$ = $1;}
+                ;
 
 InputStatement  : READ P_OPEN ID P_CLOSE ';'    {$$ = makeOperatorNode("read",$3);}
                 ;

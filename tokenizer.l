@@ -30,6 +30,8 @@
 "else"      {return ELSE;}
 "do"        {return DO;}
 "while"     {return WHILE;}
+"break"     {return BREAK;}
+"continue"  {return CONTINUE;}
 "read"      {return READ;}
 "write"     {return WRITE;}
 "writeln"   {return WRITE_LN;}

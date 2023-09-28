@@ -131,7 +131,7 @@ void writeToMemory(char address, char data){
 }
 
 void handleAssignment(tnode* left, tnode* right){
-    char r = codeGen(right);
+    char r = GenerateCode(right);
     char l = handleIdentifierLVal(left->varName);
     writeToMemory(l,r);
 }
@@ -151,8 +151,8 @@ void checkRegisterForTrue(char tempReg, char* jmpLabel){
 }
 
 char handleOperator(char* op, tnode* operand1, tnode* operand2){
-    char l = codeGen(operand1);
-    char r = codeGen(operand2);
+    char l = GenerateCode(operand1);
+    char r = GenerateCode(operand2);
     char* startLoopLabel;
     char* skipLoopLabel;
     switch(*(op)){
@@ -284,7 +284,7 @@ void loadAsciiTable(){
 void handleFunctionCalls(tnode* exp){
     loadAsciiTable();
     if (exp->varName == "write"||exp->varName == "writeln"){
-        char temp = codeGen(exp->left);
+        char temp = GenerateCode(exp->left);
         backup();
         fprintf(target_file, "//WRITE\n");
         loadRegToReg(temp,'B');
@@ -306,37 +306,38 @@ void handleFunctionCalls(tnode* exp){
     }
 }
 
-void handleIfControlStatements(tnode* statement, char* elseLabel){
+void handleIfControlStatements(tnode* statement, LoopLabel loopLabelDetails, char* elseLabel){
     if (statement->varName == "if"){
-        char temp = codeGen(statement->left);
+        char temp = GenerateCode(statement->left, loopLabelDetails);
         char* skipBlockLabel = checkRegisterForFalse(temp);
-        if(statement->right->nodeType != CONTROL){
-            codeGen(statement->right);
+        if(statement->right->nodeType == CONTROL && statement->right->varName == "else")
+            handleIfControlStatements(statement->right, loopLabelDetails, skipBlockLabel);
+        else {
+            GenerateCode(statement->right, loopLabelDetails);
             fprintf(target_file, "\n%s:\n", skipBlockLabel);
         }
-        else
-            handleIfControlStatements(statement->right, skipBlockLabel);
     }
     else if(statement->varName == "else"){
-        codeGen(statement->left);
+        GenerateCode(statement->left, loopLabelDetails);
         char* endIfLabel = getLabel();
         fprintf(target_file, "JR %s\n", endIfLabel);
         fprintf(target_file, "\n%s:\n", elseLabel);
-        codeGen(statement->right);
+        GenerateCode(statement->right, loopLabelDetails);
         fprintf(target_file, "\n%s:\n", endIfLabel);
     }
 }
 
-void handleControlStatements(tnode* statement){
+void handleControlStatements(tnode* statement, LoopLabel loopLabelDetails){
     if (statement->varName == "if")
-        handleIfControlStatements(statement, NULL);
+        handleIfControlStatements(statement, loopLabelDetails, NULL);
     else if(statement->varName == "while")
     {
         char* loopLabel = getLabel();
         fprintf(target_file, "\n%s:\n", loopLabel);
-        char temp = codeGen(statement->left);
+        char temp = GenerateCode(statement->left);
         char* skipLoopLabel = checkRegisterForFalse(temp);
-        codeGen(statement->right);
+        loopLabelDetails = {true, loopLabel, skipLoopLabel};
+        GenerateCode(statement->right, loopLabelDetails);
         fprintf(target_file, "JR %s\n", loopLabel);
         fprintf(target_file, "\n%s:\n", skipLoopLabel);
     }
@@ -344,13 +345,22 @@ void handleControlStatements(tnode* statement){
     {
         char* loopLabel = getLabel();
         fprintf(target_file, "\n%s:\n", loopLabel);
-        codeGen(statement->left);
-        char temp = codeGen(statement->right);
+        char* skipLoopLabel = getLabel();
+        loopLabelDetails = {true, loopLabel, skipLoopLabel};
+        GenerateCode(statement->left, loopLabelDetails);
+        char temp = GenerateCode(statement->right);
         checkRegisterForTrue(temp, loopLabel);
+        fprintf(target_file, "\n%s:\n", skipLoopLabel);
+    }
+    else if (loopLabelDetails.inLoop){
+        if(statement->varName == "break")
+            fprintf(target_file, "JR %s\n", loopLabelDetails.breakLabel);
+        else if(statement->varName == "continue")
+            fprintf(target_file, "JR %s\n", loopLabelDetails.continueLabel);
     }
 }
 
-char codeGen(struct tnode *t){
+char GenerateCode(struct tnode *t, LoopLabel loopLabelDetails){
     switch (t->nodeType)
     {
     case NUMERIC_LITERAL:
@@ -366,11 +376,11 @@ char codeGen(struct tnode *t){
         handleFunctionCalls(t);
         break;
     case CONTROL:
-        handleControlStatements(t);
+        handleControlStatements(t, loopLabelDetails);
         break;
     case CONNECTOR:
-        codeGen(t->left);
-        codeGen(t->right);
+        GenerateCode(t->left, loopLabelDetails);
+        GenerateCode(t->right, loopLabelDetails);
         break;
     default:
         cout<<"Undefined Node : "<< t->nodeType << " = '" <<t->varName << "'" << endl;
@@ -378,4 +388,8 @@ char codeGen(struct tnode *t){
         break;
     }
     return 0;
+}
+
+char GenerateCode(tnode *t){
+    return GenerateCode(t, {false, NULL, NULL});
 }

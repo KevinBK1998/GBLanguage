@@ -28,6 +28,12 @@ typedef struct tnode{
     struct tnode *left,*right; //left and right branches
 } tnode;
 
+typedef struct LoopLabel{
+    bool inLoop;
+    char *continueLabel;
+    char *breakLabel;
+}LoopLabel;
+
 // Make a leaf numeric literal node
 struct tnode* makeLeafNode(int n);
 
@@ -42,6 +48,9 @@ struct tnode* makeOperatorNode(char c, struct tnode *l, struct tnode *r);
 
 // Make a function node with single child
 struct tnode* makeOperatorNode(char *c, struct tnode *child);
+
+// Make a control node with with no branches
+struct tnode* makeControlNode(char *c);
 
 // Make a control node with with left and right branches
 struct tnode* makeControlNode(char *c, struct tnode *l, struct tnode *r);

@@ -18,7 +18,7 @@
 
 %type <node> Program ListStatement BlockStatement Statement InputStatement OutputStatement ControlStatement AssignmentStatement
 %type <node> Expression BooleanExpression
-%token BLOCK_OPEN BLOCK_CLOSE P_OPEN P_CLOSE LT GT LE GE EQ NE IF ELSE DO WHILE READ WRITE WRITE_LN PLUS MINUS MUL DIV
+%token BLOCK_OPEN BLOCK_CLOSE P_OPEN P_CLOSE LT GT LE GE EQ NE IF ELSE DO WHILE BREAK CONTINUE READ WRITE WRITE_LN PLUS MINUS MUL DIV
 %token <node> ID NUM
 %left PLUS MINUS
 %left MUL DIV
@@ -26,7 +26,7 @@
 %nonassoc EQ NE
 %%
 
-Program : BLOCK_OPEN ListStatement BLOCK_CLOSE  {codeGen($2);}
+Program : BLOCK_OPEN ListStatement BLOCK_CLOSE  {GenerateCode($2);}
         | BLOCK_OPEN BLOCK_CLOSE                { $$ = NULL; }
         ;
 
@@ -42,6 +42,8 @@ Statement   : InputStatement        {$$ = $1;}
             | OutputStatement       {$$ = $1;}
             | ControlStatement      {$$ = $1;}
             | AssignmentStatement   {$$ = $1;}
+            | BREAK ';'             {$$ = makeControlNode("break");}
+            | CONTINUE ';'          {$$ = makeControlNode("continue");}
             ;
 
 InputStatement  : READ P_OPEN ID P_CLOSE ';'    {$$ = makeOperatorNode("read",$3);}

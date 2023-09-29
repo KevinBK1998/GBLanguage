@@ -3,21 +3,25 @@
     #include <stdlib.h>
     #include <string.h>
     #include "ASTree.h"
+    #include "ASTree.h"
     #include "ASTree.cpp"
     #include "GBCompiler.h"
     #include "GBCompiler.cpp"
+    #include "GSTable.h"
+    #include "GSTable.cpp"
     using namespace std;
     int yylex(void);
     void yyerror(char const *s);
+    ASNode* safeLinkSymbol(ASNode*);
     extern FILE* yyin;
 %}
 
 %union{
-    struct tnode *node;
+    struct ASNode *node;
 }
 
 %type <node> Program ListStatement BlockStatement Statement InputStatement OutputStatement ControlStatement AssignmentStatement
-%type <node> Expression BooleanExpression VariableList Type
+%type <node> Expression BooleanExpression VariableList Type Variable
 %token BLOCK_OPEN BLOCK_CLOSE P_OPEN P_CLOSE IF ELSE DO WHILE BREAK CONTINUE READ WRITE WRITE_LN BYTE
 %token LT GT LE GE EQ NE PLUS MINUS MUL DIV
 %token <node> ID NUM
@@ -48,7 +52,7 @@ Statement   : DeclareStatement      {$$=NULL;}
             | CONTINUE ';'          {$$ = makeControlNode("continue");}
             ;
 
-DeclareStatement    : Type VariableList ';' {Install()}
+DeclareStatement    : Type VariableList ';' {DeclareList($1, $2);}
                     ;
 
 Type    : BYTE  {$$=makeDataTypeNode(BYTE_TYPE);}
@@ -58,7 +62,7 @@ VariableList    : VariableList ',' ID   {$$=makeConnectorNode($1,$3);}
                 | ID                    {$$ = $1;}
                 ;
 
-InputStatement  : READ P_OPEN ID P_CLOSE ';'    {$$ = makeOperatorNode("read",$3);}
+InputStatement  : READ P_OPEN Variable P_CLOSE ';'    {$$ = makeOperatorNode("read",$3);}
                 ;
 
 OutputStatement : WRITE P_OPEN Expression P_CLOSE ';'       {$$ = makeOperatorNode("write",$3);}
@@ -71,7 +75,7 @@ ControlStatement    : IF P_OPEN BooleanExpression P_CLOSE BlockStatement        
                     | DO BlockStatement WHILE P_OPEN BooleanExpression P_CLOSE ';'              {$$ = makeControlNode("do-while", $2, $5);}
                     ;
 
-AssignmentStatement : ID '=' Expression ';' {$$ = makeOperatorNode('=',$1,$3);}
+AssignmentStatement : Variable '=' Expression ';' {$$ = makeOperatorNode('=',$1,$3);}
                     ;
 
 BooleanExpression   : Expression EQ Expression  {$$ = makeOperatorNode('E',$1,$3);}
@@ -87,18 +91,26 @@ Expression  : Expression PLUS Expression    {$$ = makeOperatorNode('+',$1,$3);}
             | Expression MUL Expression     {$$ = makeOperatorNode('*',$1,$3);}
             | Expression DIV Expression     {$$ = makeOperatorNode('/',$1,$3);}
             | P_OPEN Expression P_CLOSE     {$$ = $2;}
-            | ID                            {$$ = $1;}
+            | Variable                      {$$ = $1;}
             | NUM                           {$$ = $1;}
             ;
+Variable    : ID    {$$=safeLinkSymbol($1);}
 
 %%
 
 void yyerror(char const *s)
 {
     printf("\nERROR during parse : %s, Deleting temp file status: %d\n\n", s, remove("TEMP.gsm"));
+    exit(1);
 }
 
-
+ASNode* safeLinkSymbol(ASNode* node){
+    char* name = node->varName;
+    node = linkSymbol(node);
+    if (node==NULL)
+        yyerror(strcat(name, " is not declared"));
+    return node;
+}
 
 int main(int argc, char* argv[]) {
     char *name = "TEMP";

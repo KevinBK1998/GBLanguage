@@ -108,7 +108,7 @@ char readFromMemory(char address){
     return address;
 }
 
-char handleIdentifier(tnode* var){
+char handleIdentifier(ASNode* var){
     char temp = handleIdentifierLVal(var->varName);
     temp = readFromMemory(temp);
     return temp;
@@ -130,7 +130,7 @@ void writeToMemory(char address, char data){
     restore();
 }
 
-void handleAssignment(tnode* left, tnode* right){
+void handleAssignment(ASNode* left, ASNode* right){
     char r = GenerateCode(right);
     char l = handleIdentifierLVal(left->varName);
     writeToMemory(l,r);
@@ -150,7 +150,7 @@ void checkRegisterForTrue(char tempReg, char* jmpLabel){
     fprintf(target_file, "JR NZ, %s\n\n", jmpLabel);
 }
 
-char handleOperator(char* op, tnode* operand1, tnode* operand2){
+char handleOperator(char* op, ASNode* operand1, ASNode* operand2){
     char l = GenerateCode(operand1);
     char r = GenerateCode(operand2);
     char* startLoopLabel;
@@ -281,7 +281,7 @@ void loadAsciiTable(){
     loadedAscii = true;
 }
 
-void handleFunctionCalls(tnode* exp){
+void handleFunctionCalls(ASNode* exp){
     loadAsciiTable();
     if (exp->varName == "write"||exp->varName == "writeln"){
         char temp = GenerateCode(exp->left);
@@ -306,7 +306,7 @@ void handleFunctionCalls(tnode* exp){
     }
 }
 
-void handleIfControlStatements(tnode* statement, LoopLabel loopLabelDetails, char* elseLabel){
+void handleIfControlStatements(ASNode* statement, LoopLabel loopLabelDetails, char* elseLabel){
     if (statement->varName == "if"){
         char temp = GenerateCode(statement->left, loopLabelDetails);
         char* skipBlockLabel = checkRegisterForFalse(temp);
@@ -327,7 +327,7 @@ void handleIfControlStatements(tnode* statement, LoopLabel loopLabelDetails, cha
     }
 }
 
-void handleControlStatements(tnode* statement, LoopLabel loopLabelDetails){
+void handleControlStatements(ASNode* statement, LoopLabel loopLabelDetails){
     if (statement->varName == "if")
         handleIfControlStatements(statement, loopLabelDetails, NULL);
     else if(statement->varName == "while")
@@ -360,8 +360,9 @@ void handleControlStatements(tnode* statement, LoopLabel loopLabelDetails){
     }
 }
 
-char GenerateCode(struct tnode *t, LoopLabel loopLabelDetails){
-    if (t!=NULL)
+char GenerateCode(struct ASNode *t, LoopLabel loopLabelDetails){
+    if (t!=NULL){
+        cout<<"Test Node : "<< t->nodeType << " = '" <<t->varName << "'" << endl;
         switch (t->nodeType)
         {
         case NUMERIC_LITERAL:
@@ -388,9 +389,10 @@ char GenerateCode(struct tnode *t, LoopLabel loopLabelDetails){
             exit(-1);
             break;
         }
+    }
     return 0;
 }
 
-char GenerateCode(tnode *t){
+char GenerateCode(ASNode *t){
     return GenerateCode(t, {false, NULL, NULL});
 }

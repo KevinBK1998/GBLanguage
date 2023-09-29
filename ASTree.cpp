@@ -1,43 +1,61 @@
+#include <iostream>
 #include <cstdlib>
 #include "ASTree.h"
-struct tnode* makeLeafNode(int n)
+#include "GSTable.h"
+using namespace std;
+
+ASNode* makeLeafNode(int n)
 {
-    struct tnode *temp;
-    temp = (struct tnode*)malloc(sizeof(struct tnode));
-    temp->varName = NULL;
+    ASNode* temp = (ASNode*)malloc(sizeof(ASNode));
     temp->val = n;
+    temp->varName = nullptr;
+    temp->symbol = nullptr;
     temp->nodeType = NUMERIC_LITERAL;
-    temp->left = NULL;
-    temp->right = NULL;
+    temp->dataType = BYTE_TYPE;
+    temp->left = nullptr;
+    temp->right = nullptr;
     return temp;
 }
 
-struct tnode* makeLeafNode(char* id)
+ASNode* makeLeafNode(char* id)
 {
-    struct tnode *temp;
-    temp = (struct tnode*)malloc(sizeof(struct tnode));
+    ASNode* temp = (ASNode*)malloc(sizeof(ASNode));
+    temp->val = 0;
     temp->varName = id;
+    temp->symbol = nullptr;
     temp->nodeType = IDENTIFIER;
-    temp->left = NULL;
-    temp->right = NULL;
+    temp->dataType = INVALID_TYPE;
+    temp->left = nullptr;
+    temp->right = nullptr;
     return temp;
 }
 
-struct tnode* makeDataTypeNode(DataType dt)
+ASNode* linkSymbol(ASNode* node)
 {
-    struct tnode *temp;
-    temp = (struct tnode*)malloc(sizeof(struct tnode));
-    temp->varName = NULL;
-    temp->nodeType = IDENTIFIER;
+    GSNode* symbol = Lookup(node->varName);
+    if(symbol==NULL)
+        return NULL;
+    node->dataType = symbol->dtype;
+    node->symbol = symbol;
+    return node;
+}
+
+ASNode* makeDataTypeNode(DataType dt)
+{
+    ASNode* temp = (ASNode*)malloc(sizeof(ASNode));
+    temp->val = 0;
+    temp->varName = nullptr;
+    temp->symbol = nullptr;
+    temp->nodeType = DATA_TYPE;
     temp->dataType = dt;
-    temp->left = NULL;
-    temp->right = NULL;
+    temp->left = nullptr;
+    temp->right = nullptr;
     return temp;
 }
 
-struct tnode* makeOperatorNode(char c,struct tnode *l,struct tnode *r){
-    struct tnode *temp;
-    temp = (struct tnode*)malloc(sizeof(struct tnode));
+struct ASNode* makeOperatorNode(char c,struct ASNode *l,struct ASNode *r){
+    struct ASNode *temp;
+    temp = (struct ASNode*)malloc(sizeof(struct ASNode));
     temp->varName = (char *)malloc(sizeof(char));
     *(temp->varName) = c;
     temp->nodeType = OPERATOR;
@@ -48,9 +66,9 @@ struct tnode* makeOperatorNode(char c,struct tnode *l,struct tnode *r){
     return temp;
 }
 
-struct tnode* makeOperatorNode(char *c,struct tnode *child){
-    struct tnode *temp;
-    temp = (struct tnode*)malloc(sizeof(struct tnode));
+struct ASNode* makeOperatorNode(char *c,struct ASNode *child){
+    struct ASNode *temp;
+    temp = (struct ASNode*)malloc(sizeof(struct ASNode));
     temp->varName = c;
     temp->nodeType = FUNCTION_CALL;
     temp->left = child;
@@ -58,9 +76,9 @@ struct tnode* makeOperatorNode(char *c,struct tnode *child){
     return temp;
 }
 
-struct tnode* makeControlNode(char *c){
-    struct tnode *temp;
-    temp = (struct tnode*)malloc(sizeof(struct tnode));
+struct ASNode* makeControlNode(char *c){
+    struct ASNode *temp;
+    temp = (struct ASNode*)malloc(sizeof(struct ASNode));
     temp->varName = c;
     temp->nodeType = CONTROL;
     temp->left = NULL;
@@ -68,9 +86,9 @@ struct tnode* makeControlNode(char *c){
     return temp;
 }
 
-struct tnode* makeControlNode(char *c, struct tnode *l, struct tnode *r){
-    struct tnode *temp;
-    temp = (struct tnode*)malloc(sizeof(struct tnode));
+struct ASNode* makeControlNode(char *c, struct ASNode *l, struct ASNode *r){
+    struct ASNode *temp;
+    temp = (struct ASNode*)malloc(sizeof(struct ASNode));
     temp->varName = c;
     temp->nodeType = CONTROL;
     temp->left = l;
@@ -78,9 +96,9 @@ struct tnode* makeControlNode(char *c, struct tnode *l, struct tnode *r){
     return temp;
 }
 
-struct tnode* makeConnectorNode(struct tnode *l,struct tnode *r){
-    struct tnode *temp;
-    temp = (struct tnode*)malloc(sizeof(struct tnode));
+struct ASNode* makeConnectorNode(struct ASNode *l,struct ASNode *r){
+    struct ASNode *temp;
+    temp = (struct ASNode*)malloc(sizeof(struct ASNode));
     temp->varName = NULL;
     temp->nodeType = CONNECTOR;
     temp->left = l;

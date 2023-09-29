@@ -2,8 +2,9 @@
 #ifndef GSTABLE_H
 #define GSTABLE_H
 
+// Lookup variable in symbol table
 GSNode* Lookup(char*);
-void Install(char*, DataType, int);
-void DeclareList(ASNode*, ASNode*);
+// install variable in symbol table
+bool Install(char*, DataType, int);
 
 #endif

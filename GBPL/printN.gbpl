@@ -1,0 +1,10 @@
+{
+    byte iterator, limit;
+    read(limit);
+    iterator=1;
+    do {
+        writeln(iterator);
+        if(iterator==30) break;
+        iterator=iterator+1;
+    } while (iterator <= limit);
+}

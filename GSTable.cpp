@@ -5,6 +5,7 @@
 using namespace std;
 
 GSNode* head=nullptr;
+uint16_t sp = 0xFFFE;
 
 GSNode* Lookup(char *name){
     GSNode* temp=head;
@@ -13,21 +14,15 @@ GSNode* Lookup(char *name){
     return temp;
 }
 
-void Install(char *name, DataType type, int size){
+bool Install(char *name, DataType type, int size){
+    if(Lookup(name)!=NULL)
+        return false;
     GSNode* node = (GSNode*)malloc(sizeof(GSNode));
     node->name=name;
     node->dtype=type;
     node->size=size;
-    node->bind=4096;
+    node->bind=sp--;
     node->n=head;
     head = node;
-}
-
-void DeclareList(ASNode* type, ASNode* list){
-    if (list->nodeType == CONNECTOR){
-        DeclareList(type, list->left);
-        DeclareList(type, list->right);
-    }
-    else 
-        Install(list->varName, type->dataType, 1);
+    return true;
 }

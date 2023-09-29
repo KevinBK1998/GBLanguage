@@ -64,10 +64,10 @@ char handleNumericLiteral(int literal){
     return temp;
 }
 
-char handleIdentifierLVal(char *var){
+char handleIdentifierLVal(GSNode* var){
     // cout<<var<<endl;
     char temp = getReg();
-    fprintf(target_file, "LD %c, 0x%X\n", temp, var[0]+0x1F);
+    fprintf(target_file, "LD %c, 0x%X\n", temp, var->bind & 0xFF);
     return temp;
 }
 
@@ -109,7 +109,7 @@ char readFromMemory(char address){
 }
 
 char handleIdentifier(ASNode* var){
-    char temp = handleIdentifierLVal(var->varName);
+    char temp = handleIdentifierLVal(var->symbol);
     temp = readFromMemory(temp);
     return temp;
 }
@@ -132,7 +132,7 @@ void writeToMemory(char address, char data){
 
 void handleAssignment(ASNode* left, ASNode* right){
     char r = GenerateCode(right);
-    char l = handleIdentifierLVal(left->varName);
+    char l = handleIdentifierLVal(left->symbol);
     writeToMemory(l,r);
 }
 
@@ -299,7 +299,7 @@ void handleFunctionCalls(ASNode* exp){
         fprintf(target_file, "LD A, 0x%X\n", READ_CALL);
         fprintf(target_file, "CALL LIBRARY\n");
         restore();
-        char add = handleIdentifierLVal(exp->left->varName);
+        char add = handleIdentifierLVal(exp->left->symbol);
         char temp = getReg();
         fprintf(target_file, "LD %c, A\n", temp);
         writeToMemory(add, temp);
@@ -362,7 +362,7 @@ void handleControlStatements(ASNode* statement, LoopLabel loopLabelDetails){
 
 char GenerateCode(struct ASNode *t, LoopLabel loopLabelDetails){
     if (t!=NULL){
-        cout<<"Test Node : "<< t->nodeType << " = '" <<t->varName << "'" << endl;
+        // cout<<"Test Node : "<< t->nodeType << " = '" <<t->varName << "'" << endl;
         switch (t->nodeType)
         {
         case NUMERIC_LITERAL:

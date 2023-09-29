@@ -1,3 +1,4 @@
+#include <stdint.h>
 #ifndef DATASTRUCT_H
 #define DATASTRUCT_H
 
@@ -34,7 +35,7 @@ typedef struct GSNode{
     char *name;
     DataType dtype;
     int size;
-    int bind;
+    uint16_t bind;
     struct GSNode *n;
 }GSNode;
 

@@ -3,7 +3,6 @@
     #include <string.h>
     #include <stdio.h>
     #include "y.tab.h"
-    #include "DS.h"
     #include "ASTree.h"
 
     int number;

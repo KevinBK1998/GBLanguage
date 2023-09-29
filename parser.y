@@ -3,7 +3,6 @@
     #include <stdlib.h>
     #include <string.h>
     #include "ASTree.h"
-    #include "ASTree.h"
     #include "ASTree.cpp"
     #include "GBCompiler.h"
     #include "GBCompiler.cpp"
@@ -12,6 +11,7 @@
     using namespace std;
     int yylex(void);
     void yyerror(char const *s);
+    void DeclareList(ASNode*, ASNode*);
     ASNode* safeLinkSymbol(ASNode*);
     extern FILE* yyin;
 %}
@@ -102,6 +102,20 @@ void yyerror(char const *s)
 {
     printf("\nERROR during parse : %s, Deleting temp file status: %d\n\n", s, remove("TEMP.gsm"));
     exit(1);
+}
+
+void safeDeclareList(ASNode* type, ASNode* list){
+    if (list->nodeType == CONNECTOR){
+        safeDeclareList(type, list->left);
+        safeDeclareList(type, list->right);
+    }
+    else if(!Install(list->varName, type->dataType, 1))
+        yyerror(strcat(list->varName, " is getting re-declared"));
+}
+
+void DeclareList(ASNode* type, ASNode* list){
+    safeDeclareList(type, list);
+    fprintf(target_file, "LD SP, 0x%X\n", sp);
 }
 
 ASNode* safeLinkSymbol(ASNode* node){

@@ -10,7 +10,7 @@ uint16_t sp = 0xFFFE;
 GSNode* Lookup(char *name){
     GSNode* temp=head;
     while(temp && strcmp(temp->name,name))
-        temp=temp->n;
+        temp=temp->next;
     return temp;
 }
 
@@ -21,8 +21,9 @@ bool Install(char *name, DataType type, int size){
     node->name=name;
     node->dtype=type;
     node->size=size;
-    node->bind=sp--;
-    node->n=head;
+    node->bind=sp;
+    sp-=size;
+    node->next=head;
     head = node;
     return true;
 }

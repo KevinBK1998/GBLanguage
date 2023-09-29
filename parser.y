@@ -22,7 +22,7 @@
 
 %type <node> Program ListStatement BlockStatement Statement InputStatement OutputStatement ControlStatement AssignmentStatement
 %type <node> Expression BooleanExpression VariableList Type Variable
-%token BLOCK_OPEN BLOCK_CLOSE P_OPEN P_CLOSE IF ELSE DO WHILE BREAK CONTINUE READ WRITE WRITE_LN BYTE
+%token BLOCK_OPEN BLOCK_CLOSE B_OPEN B_CLOSE P_OPEN P_CLOSE IF ELSE DO WHILE BREAK CONTINUE READ WRITE WRITE_LN BYTE
 %token LT GT LE GE EQ NE PLUS MINUS MUL DIV
 %token <node> ID NUM
 %left PLUS MINUS
@@ -58,11 +58,14 @@ DeclareStatement    : Type VariableList ';' {DeclareList($1, $2);}
 Type    : BYTE  {$$=makeDataTypeNode(BYTE_TYPE);}
         ;
 
-VariableList    : VariableList ',' ID   {$$=makeConnectorNode($1,$3);}
-                | ID                    {$$ = $1;}
+VariableList    : VariableList ',' ID B_OPEN NUM B_CLOSE    {$$=makeConnectorNode($1, makeArrayNode($3, $5));}
+                | VariableList ',' ID                       {$$=makeConnectorNode($1,$3);}
+                | ID B_OPEN NUM B_CLOSE                     {$$ = makeArrayNode($1, $3);}
+                | ID                                        {$$ = $1;}
                 ;
 
-InputStatement  : READ P_OPEN Variable P_CLOSE ';'    {$$ = makeOperatorNode("read",$3);}
+InputStatement  : READ P_OPEN Variable P_CLOSE ';'                              {$$ = makeOperatorNode("read",$3);}
+                | READ P_OPEN Variable B_OPEN Expression B_CLOSE P_CLOSE ';'    {$$ = makeOperatorNode("read", makeArrayNode($3, $5));}
                 ;
 
 OutputStatement : WRITE P_OPEN Expression P_CLOSE ';'       {$$ = makeOperatorNode("write",$3);}
@@ -86,13 +89,14 @@ BooleanExpression   : Expression EQ Expression  {$$ = makeOperatorNode('E',$1,$3
                     | Expression GT Expression  {$$ = makeOperatorNode('>',$1,$3);}
                     ;
 
-Expression  : Expression PLUS Expression    {$$ = makeOperatorNode('+',$1,$3);}
-            | Expression MINUS Expression   {$$ = makeOperatorNode('-',$1,$3);}
-            | Expression MUL Expression     {$$ = makeOperatorNode('*',$1,$3);}
-            | Expression DIV Expression     {$$ = makeOperatorNode('/',$1,$3);}
-            | P_OPEN Expression P_CLOSE     {$$ = $2;}
-            | Variable                      {$$ = $1;}
-            | NUM                           {$$ = $1;}
+Expression  : Expression PLUS Expression            {$$ = makeOperatorNode('+',$1,$3);}
+            | Expression MINUS Expression           {$$ = makeOperatorNode('-',$1,$3);}
+            | Expression MUL Expression             {$$ = makeOperatorNode('*',$1,$3);}
+            | Expression DIV Expression             {$$ = makeOperatorNode('/',$1,$3);}
+            | P_OPEN Expression P_CLOSE             {$$ = $2;}
+            | Variable                              {$$ = $1;}
+            | Variable B_OPEN Expression B_CLOSE    {$$ = makeArrayNode($1, $3);}
+            | NUM                                   {$$ = $1;}
             ;
 Variable    : ID    {$$=safeLinkSymbol($1);}
 
@@ -109,8 +113,16 @@ void safeDeclareList(ASNode* type, ASNode* list){
         safeDeclareList(type, list->left);
         safeDeclareList(type, list->right);
     }
-    else if(!Install(list->varName, type->dataType, 1))
-        yyerror(strcat(list->varName, " is getting re-declared"));
+    else {
+        char* name = list->varName;
+        int size = 1;
+        if (list->nodeType == ARRAY_VARIABLE){
+            name = list->left->varName;
+            size = list->right->val;
+        }
+        if(!Install(name, type->dataType, size))
+            yyerror(strcat(name, " is getting re-declared"));
+    }
 }
 
 void DeclareList(ASNode* type, ASNode* list){

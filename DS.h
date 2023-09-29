@@ -6,6 +6,7 @@ enum NodeType {
     NUMERIC_LITERAL,
     DATA_TYPE,
     IDENTIFIER,
+    ARRAY_VARIABLE,
     ASSIGNMENT,
     OPERATOR,
     FUNCTION_CALL,
@@ -36,7 +37,7 @@ typedef struct GSNode{
     DataType dtype;
     int size;
     uint16_t bind;
-    struct GSNode *n;
+    struct GSNode *next;
 }GSNode;
 
 typedef struct ASNode{

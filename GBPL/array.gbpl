@@ -1,0 +1,14 @@
+{
+    byte array[10], iterator, limit;
+    read(limit);
+    iterator=0;
+    while (iterator < limit) {
+        read(array[iterator]);
+        iterator=iterator+1;
+    }
+    iterator=0;
+    while (iterator < limit) {
+        writeln(array[iterator]);
+        iterator=iterator+1;
+    }
+}

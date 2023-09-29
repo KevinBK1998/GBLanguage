@@ -96,7 +96,7 @@ assemblyMap = {
     "LD H, A":0x67,         "LD L, A":0x6F,
     "HALT":0x76,            "LD [HL], A":0x77,  "LD A, B":0x78,     "LD A, C":0x79,     "LD A, D":0x7A,     "LD A, E":0x7B,         "LD A, H":0x7C,     "LD A, L":0x7D,     "LD A, [HL]":0x7F,
     "ADD A, B":0x80,        "ADD A, C":0x81,    "ADD A, D":0x82,    "ADD A, E":0x83,    "ADD A, L":0x85,    "ADD A, [HL]":0x86,
-    "SUB A, B":0x90,        "SUB A, C":0x91,    "SUB A, D":0x92,    "SUB A, A":0x97,
+    "SUB A, B":0x90,        "SUB A, C":0x91,    "SUB A, D":0x92,    "SUB A, E":0x93,    "SUB A, A":0x97,
     "XOR A, A":0xAF,
     "OR B":0xB0,            "OR A":0xB7,        "CP B":0xB8,        "CP C":0xB9,        "CP D":0xBA,        "CP E":0xBB,            "CP L":0xBD,        "CP [HL]":0xBE,
     "POP BC":0xC1,          "JP 0":0xC3,        "PUSH BC":0xC5,     "ADD A, 0":0xC6,    "RET":0xC9,         "CALL 0":0xCD,          "ADC A, 0":0xCE,

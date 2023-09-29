@@ -53,6 +53,19 @@ ASNode* makeDataTypeNode(DataType dt)
     return temp;
 }
 
+ASNode* makeArrayNode(ASNode* id, ASNode* size)
+{
+    ASNode* temp = (ASNode*)malloc(sizeof(ASNode));
+    temp->val = 0;
+    temp->varName = nullptr;
+    temp->symbol = nullptr;
+    temp->nodeType = ARRAY_VARIABLE;
+    temp->dataType = id->dataType;
+    temp->left = id;
+    temp->right = size;
+    return temp;
+}
+
 struct ASNode* makeOperatorNode(char c,struct ASNode *l,struct ASNode *r){
     struct ASNode *temp;
     temp = (struct ASNode*)malloc(sizeof(struct ASNode));

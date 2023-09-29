@@ -8,6 +8,15 @@ ASNode* makeLeafNode(int n);
 // Make a leaf identifier node
 ASNode* makeLeafNode(char* id);
 
+/*
+Link symbol to the node
+returns NULL if undeclared variable
+*/
+ASNode* linkSymbol(ASNode*);
+
+// Make a leaf identifier node with size
+ASNode* makeArrayNode(char* id, int size);
+
 // Make a data type leaf node
 struct ASNode* makeDataTypeNode(DataType);
 

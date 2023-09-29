@@ -20,6 +20,7 @@ char getReg(){
         cout<<"OOM"<<endl;
         exit(1);
     }
+    // cout<<"AllocateReg:"<<freeReg<<endl;
     return freeReg == 'G' ? 'L' :freeReg;
 }
 
@@ -37,6 +38,7 @@ char* getLabel(){
 }
 
 int freeReg(char regToBeFreed){
+    // cout<<"FreeReg:"<<regToBeFreed<<endl;
     int temp = regToBeFreed == 'L' ? 6 : regToBeFreed - 'A';
     reg &= ~(1 << temp);
     return temp -'A';
@@ -71,6 +73,15 @@ char handleIdentifierLVal(GSNode* var){
     return temp;
 }
 
+char handleArrayLVal(ASNode* var, ASNode* index){
+    GSNode* symbol = var->symbol;
+    char temp = GenerateCode(index);
+    fprintf(target_file, "LD A, 0x%X\n", symbol->bind & 0xFF);
+    fprintf(target_file, "SUB A, %c\n", temp);
+    fprintf(target_file, "LD %c, A\n", temp);
+    return temp;
+}
+
 void loadRegToReg(char from, char to){
     loadTOAccumulator(from);
     loadFROMAccumulator(to);
@@ -95,14 +106,12 @@ void restore(){
 }
 
 char readFromMemory(char address){
-    if(address!='C') {
-        freeReg(address);
-        backup();
-        loadRegToReg(address, 'C');
-    }
-    fprintf(target_file, "LD A, [HC]\n");
+    freeReg(address);
+    backup();
     if(address!='C')
-        restore();
+        loadRegToReg(address, 'C');
+    fprintf(target_file, "LD A, [HC]\n");
+    restore();
     address=getReg();
     fprintf(target_file, "LD %c, A\n", address);
     return address;
@@ -110,6 +119,12 @@ char readFromMemory(char address){
 
 char handleIdentifier(ASNode* var){
     char temp = handleIdentifierLVal(var->symbol);
+    temp = readFromMemory(temp);
+    return temp;
+}
+
+char handleArray(ASNode* var){
+    char temp = handleArrayLVal(var->left, var->right);
     temp = readFromMemory(temp);
     return temp;
 }
@@ -281,25 +296,31 @@ void loadAsciiTable(){
     loadedAscii = true;
 }
 
-void handleFunctionCalls(ASNode* exp){
+void handleFunctionCalls(ASNode* fun){
     loadAsciiTable();
-    if (exp->varName == "write"||exp->varName == "writeln"){
-        char temp = GenerateCode(exp->left);
+    if (fun->varName == "write"||fun->varName == "writeln"){
+        char temp = GenerateCode(fun->left);
         backup();
         fprintf(target_file, "//WRITE\n");
         loadRegToReg(temp,'B');
-        fprintf(target_file, "LD A, 0x%X\n", (exp->varName == "writeln")?WRITE_NL_CALL:WRITE_CALL);
+        fprintf(target_file, "LD A, 0x%X\n", (fun->varName == "writeln")?WRITE_NL_CALL:WRITE_CALL);
         fprintf(target_file, "CALL LIBRARY\n");
         restore();
         freeReg(temp);
     }
-    else if(exp->varName == "read"){
+    else if(fun->varName == "read"){
+        ASNode* exp = fun->left;
+        char add;
+        if (exp->nodeType == ARRAY_VARIABLE){
+            add = handleArrayLVal(exp->left, exp->right);
+        }
+        else
+            add = handleIdentifierLVal(exp->symbol);
         backup();
         fprintf(target_file, "//READ\n");
         fprintf(target_file, "LD A, 0x%X\n", READ_CALL);
         fprintf(target_file, "CALL LIBRARY\n");
         restore();
-        char add = handleIdentifierLVal(exp->left->symbol);
         char temp = getReg();
         fprintf(target_file, "LD %c, A\n", temp);
         writeToMemory(add, temp);
@@ -310,6 +331,7 @@ void handleIfControlStatements(ASNode* statement, LoopLabel loopLabelDetails, ch
     if (statement->varName == "if"){
         char temp = GenerateCode(statement->left, loopLabelDetails);
         char* skipBlockLabel = checkRegisterForFalse(temp);
+        freeReg(temp);
         if(statement->right->nodeType == CONTROL && statement->right->varName == "else")
             handleIfControlStatements(statement->right, loopLabelDetails, skipBlockLabel);
         else {
@@ -336,6 +358,7 @@ void handleControlStatements(ASNode* statement, LoopLabel loopLabelDetails){
         fprintf(target_file, "\n%s:\n", loopLabel);
         char temp = GenerateCode(statement->left);
         char* skipLoopLabel = checkRegisterForFalse(temp);
+        freeReg(temp);
         loopLabelDetails = {true, loopLabel, skipLoopLabel};
         GenerateCode(statement->right, loopLabelDetails);
         fprintf(target_file, "JR %s\n", loopLabel);
@@ -350,6 +373,7 @@ void handleControlStatements(ASNode* statement, LoopLabel loopLabelDetails){
         GenerateCode(statement->left, loopLabelDetails);
         char temp = GenerateCode(statement->right);
         checkRegisterForTrue(temp, loopLabel);
+        freeReg(temp);
         fprintf(target_file, "\n%s:\n", skipLoopLabel);
     }
     else if (loopLabelDetails.inLoop){
@@ -360,15 +384,31 @@ void handleControlStatements(ASNode* statement, LoopLabel loopLabelDetails){
     }
 }
 
+string debug(ASNode* t){
+    switch (t->nodeType)
+    {
+    case NUMERIC_LITERAL:
+        return to_string(t->val);
+    case ARRAY_VARIABLE:
+        return "ARRAY";
+    case CONNECTOR:
+        return "CONNECTOR";
+    default:
+        return t->varName;
+    }
+}
+
 char GenerateCode(struct ASNode *t, LoopLabel loopLabelDetails){
     if (t!=NULL){
-        // cout<<"Test Node : "<< t->nodeType << " = '" <<t->varName << "'" << endl;
+        // cout<<"Debug Node : "<< t->nodeType << " = '" << debug(t) << "'" << endl;
         switch (t->nodeType)
         {
         case NUMERIC_LITERAL:
             return handleNumericLiteral(t->val);
         case IDENTIFIER:
             return handleIdentifier(t);
+        case ARRAY_VARIABLE:
+            return handleArray(t);
         case ASSIGNMENT:
             handleAssignment(t->left, t->right);
             break;

@@ -22,6 +22,8 @@
 "!="    {return NE;}
 "{"     {return BLOCK_OPEN;}
 "}"     {return BLOCK_CLOSE;}
+"["     {return B_OPEN;}
+"]"     {return B_CLOSE;}
 "("     {return P_OPEN;}
 ")"     {return P_CLOSE;}
 [=;,]   {return *yytext;}
@@ -51,7 +53,10 @@
             return NUM;
         }
 
-.       {yyerror("unknown character\n");exit(1);}
+.       {
+            yyerror(strcat(yytext, "(Unknown character)"));
+            exit(1);
+        }
 
 %%
 

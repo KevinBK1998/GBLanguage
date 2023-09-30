@@ -6,5 +6,7 @@
 GSNode* Lookup(char*);
 // install variable in symbol table
 bool Install(char*, DataType, int);
+// Declare a list of variables in symbol table
+void DeclareList(ASNode*, ASNode*);
 
 #endif

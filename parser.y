@@ -11,8 +11,7 @@
     using namespace std;
     int yylex(void);
     void yyerror(char const *s);
-    void DeclareList(ASNode*, ASNode*);
-    ASNode* safeLinkSymbol(ASNode*);
+    void DeclareLine(ASNode*, ASNode*);
     extern FILE* yyin;
 %}
 
@@ -21,9 +20,9 @@
 }
 
 %type <node> Program ListStatement BlockStatement Statement InputStatement OutputStatement ControlStatement AssignmentStatement
-%type <node> Expression BooleanExpression VariableList Type Variable
-%token BLOCK_OPEN BLOCK_CLOSE B_OPEN B_CLOSE P_OPEN P_CLOSE IF ELSE DO WHILE BREAK CONTINUE READ WRITE WRITE_LN BYTE
-%token LT GT LE GE EQ NE PLUS MINUS MUL DIV
+%type <node> Expression VariableList Type Variable
+%token BLOCK_OPEN BLOCK_CLOSE B_OPEN B_CLOSE IF ELSE DO WHILE BREAK CONTINUE READ WRITE WRITE_LN
+%token LT GT LE GE EQ NE PLUS MINUS MUL DIV BYTE BOOL
 %token <node> ID NUM
 %left PLUS MINUS
 %left MUL DIV
@@ -52,10 +51,11 @@ Statement   : DeclareStatement      {$$=NULL;}
             | CONTINUE ';'          {$$ = makeControlNode("continue");}
             ;
 
-DeclareStatement    : Type VariableList ';' {DeclareList($1, $2);}
+DeclareStatement    : Type VariableList ';' {DeclareLine($1, $2);}
                     ;
 
 Type    : BYTE  {$$=makeDataTypeNode(BYTE_TYPE);}
+        | BOOL  {$$=makeDataTypeNode(BOOL_TYPE);}
         ;
 
 VariableList    : VariableList ',' ID B_OPEN NUM B_CLOSE    {$$=makeConnectorNode($1, makeArrayNode($3, $5));}
@@ -64,41 +64,39 @@ VariableList    : VariableList ',' ID B_OPEN NUM B_CLOSE    {$$=makeConnectorNod
                 | ID                                        {$$ = $1;}
                 ;
 
-InputStatement  : READ P_OPEN Variable P_CLOSE ';'                              {$$ = makeOperatorNode("read",$3);}
-                | READ P_OPEN Variable B_OPEN Expression B_CLOSE P_CLOSE ';'    {$$ = makeOperatorNode("read", makeArrayNode($3, $5));}
+InputStatement  : READ '(' Variable ')' ';'                             {$$ = makeFunctionNode("read",$3);}
+                | READ '(' Variable B_OPEN Expression B_CLOSE ')' ';'   {$$ = makeFunctionNode("read", makeArrayNode($3, $5));}
                 ;
 
-OutputStatement : WRITE P_OPEN Expression P_CLOSE ';'       {$$ = makeOperatorNode("write",$3);}
-                | WRITE_LN P_OPEN Expression P_CLOSE ';'    {$$ = makeOperatorNode("writeln",$3);}
+OutputStatement : WRITE '(' Expression ')' ';'      {$$ = makeFunctionNode("write",$3);}
+                | WRITE_LN '(' Expression ')' ';'   {$$ = makeFunctionNode("writeln",$3);}
                 ;
 
-ControlStatement    : IF P_OPEN BooleanExpression P_CLOSE BlockStatement                        {$$ = makeControlNode("if", $3, $5);}
-                    | IF P_OPEN BooleanExpression P_CLOSE BlockStatement ELSE BlockStatement    {$$ = makeControlNode("if", $3, makeControlNode("else", $5, $7));}
-                    | WHILE P_OPEN BooleanExpression P_CLOSE BlockStatement                     {$$ = makeControlNode("while", $3, $5);}
-                    | DO BlockStatement WHILE P_OPEN BooleanExpression P_CLOSE ';'              {$$ = makeControlNode("do-while", $2, $5);}
+ControlStatement    : IF '(' Expression ')' BlockStatement                      {$$ = makeControlNode("if", $3, $5);}
+                    | IF '(' Expression ')' BlockStatement ELSE BlockStatement  {$$ = makeControlNode("if", $3, makeControlNode("else", $5, $7));}
+                    | WHILE '(' Expression ')' BlockStatement                   {$$ = makeControlNode("while", $3, $5);}
+                    | DO BlockStatement WHILE '(' Expression ')' ';'            {$$ = makeControlNode("do-while", $2, $5);}
                     ;
 
 AssignmentStatement : Variable '=' Expression ';' {$$ = makeOperatorNode('=',$1,$3);}
-                    ;
-
-BooleanExpression   : Expression EQ Expression  {$$ = makeOperatorNode('E',$1,$3);}
-                    | Expression NE Expression  {$$ = makeOperatorNode('N',$1,$3);}
-                    | Expression LE Expression  {$$ = makeOperatorNode('L',$1,$3);}
-                    | Expression GE Expression  {$$ = makeOperatorNode('G',$1,$3);}
-                    | Expression LT Expression  {$$ = makeOperatorNode('<',$1,$3);}
-                    | Expression GT Expression  {$$ = makeOperatorNode('>',$1,$3);}
                     ;
 
 Expression  : Expression PLUS Expression            {$$ = makeOperatorNode('+',$1,$3);}
             | Expression MINUS Expression           {$$ = makeOperatorNode('-',$1,$3);}
             | Expression MUL Expression             {$$ = makeOperatorNode('*',$1,$3);}
             | Expression DIV Expression             {$$ = makeOperatorNode('/',$1,$3);}
-            | P_OPEN Expression P_CLOSE             {$$ = $2;}
+            | Expression EQ Expression              {$$ = makeLogicalOperatorNode('E',$1,$3);}
+            | Expression NE Expression              {$$ = makeLogicalOperatorNode('N',$1,$3);}
+            | Expression LE Expression              {$$ = makeLogicalOperatorNode('L',$1,$3);}
+            | Expression GE Expression              {$$ = makeLogicalOperatorNode('G',$1,$3);}
+            | Expression LT Expression              {$$ = makeLogicalOperatorNode('<',$1,$3);}
+            | Expression GT Expression              {$$ = makeLogicalOperatorNode('>',$1,$3);}
+            | '(' Expression ')'                    {$$ = $2;}
             | Variable                              {$$ = $1;}
             | Variable B_OPEN Expression B_CLOSE    {$$ = makeArrayNode($1, $3);}
             | NUM                                   {$$ = $1;}
             ;
-Variable    : ID    {$$=safeLinkSymbol($1);}
+Variable    : ID    {$$=linkSymbol($1);}
 
 %%
 
@@ -108,34 +106,18 @@ void yyerror(char const *s)
     exit(1);
 }
 
-void safeDeclareList(ASNode* type, ASNode* list){
-    if (list->nodeType == CONNECTOR){
-        safeDeclareList(type, list->left);
-        safeDeclareList(type, list->right);
-    }
-    else {
-        char* name = list->varName;
-        int size = 1;
-        if (list->nodeType == ARRAY_VARIABLE){
-            name = list->left->varName;
-            size = list->right->val;
-        }
-        if(!Install(name, type->dataType, size))
-            yyerror(strcat(name, " is getting re-declared"));
-    }
+void CompileError(string message){
+    yyerror(message.c_str());
 }
 
-void DeclareList(ASNode* type, ASNode* list){
-    safeDeclareList(type, list);
+void DeclareLine(ASNode* type, ASNode* list){
+    /* cout<<"Debug Declare : "<<type->dataType<<", "<< list << endl; */
+    DeclareList(type, list);
     fprintf(target_file, "LD SP, 0x%X\n", sp);
 }
 
-ASNode* safeLinkSymbol(ASNode* node){
-    char* name = node->varName;
-    node = linkSymbol(node);
-    if (node==NULL)
-        yyerror(strcat(name, " is not declared"));
-    return node;
+bool typeCheck(ASNode* operand1, ASNode* operand2){
+
 }
 
 int main(int argc, char* argv[]) {

@@ -24,9 +24,7 @@
 "}"     {return BLOCK_CLOSE;}
 "["     {return B_OPEN;}
 "]"     {return B_CLOSE;}
-"("     {return P_OPEN;}
-")"     {return P_CLOSE;}
-[=;,]   {return *yytext;}
+[=;,()]     {return *yytext;}
 
 "if"        {return IF;}
 "else"      {return ELSE;}
@@ -35,6 +33,7 @@
 "break"     {return BREAK;}
 "continue"  {return CONTINUE;}
 "byte"      {return BYTE;}
+"bool"      {return BOOL;}
 "read"      {return READ;}
 "write"     {return WRITE;}
 "writeln"   {return WRITE_LN;}

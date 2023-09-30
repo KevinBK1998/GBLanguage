@@ -4,8 +4,13 @@
 #include "GSTable.h"
 using namespace std;
 
+extern void CompileError(string);
 GSNode* head=nullptr;
 uint16_t sp = 0xFFFE;
+
+void RedeclarationError(string name){
+    CompileError(name + " is getting re-declared");
+}
 
 GSNode* Lookup(char *name){
     GSNode* temp=head;
@@ -26,4 +31,21 @@ bool Install(char *name, DataType type, int size){
     node->next=head;
     head = node;
     return true;
+}
+
+void DeclareList(ASNode* type, ASNode* list){
+    if (list->nodeType == CONNECTOR){
+        DeclareList(type, list->left);
+        DeclareList(type, list->right);
+    }
+    else {
+        char* name = list->varName;
+        int size = 1;
+        if (list->nodeType == ARRAY_VARIABLE){
+            name = list->left->varName;
+            size = list->right->val;
+        }
+        if(!Install(name, type->dataType, size))
+            RedeclarationError(name);
+    }
 }

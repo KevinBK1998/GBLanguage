@@ -26,8 +26,11 @@ struct ASNode* makeOperatorNode(char c, struct ASNode *child);
 // Make a binary operator node
 struct ASNode* makeOperatorNode(char c, struct ASNode *l, struct ASNode *r);
 
+// Make a binary logical operator node
+struct ASNode* makeLogicalOperatorNode(char c, struct ASNode *l, struct ASNode *r);
+
 // Make a function node with single child
-struct ASNode* makeOperatorNode(char *c, struct ASNode *child);
+struct ASNode* makeFunctionNode(char *c, struct ASNode *child);
 
 // Make a control leaf node
 struct ASNode* makeControlNode(char *c);

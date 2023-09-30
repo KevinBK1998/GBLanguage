@@ -1,12 +1,28 @@
 #include <iostream>
 #include <string.h>
+#include "GBCompiler.h"
 #include "ASTree.h"
 using namespace std;
 
+extern void CompileError(string);
 char reg = 0x20;
 char label[] = "A_0";
 bool loadedAscii = false;
 FILE* target_file;
+
+void TypeCheckError(DataType expectedType, ASNode* exp){
+    DataType actualType = exp->dataType;
+    string message = "Expected type to be ";
+    message += DataTypeString(expectedType);
+    message += " but '";
+    if (exp->nodeType==NUMERIC_LITERAL)
+        message += to_string(exp->val);
+    else
+        message += exp->varName;
+    message += "' is ";
+    message += DataTypeString(actualType);
+    CompileError(message);
+}
 
 char getReg(){
     int temp = reg;
@@ -145,7 +161,18 @@ void writeToMemory(char address, char data){
     restore();
 }
 
+void validateType(ASNode* left, ASNode* right){
+    if (left->dataType != right->dataType)
+        TypeCheckError(left->dataType, right);
+}
+
+void validateType(DataType dataType, ASNode* exp){
+    if (dataType != exp->dataType)
+        TypeCheckError(dataType, exp);
+}
+
 void handleAssignment(ASNode* left, ASNode* right){
+    validateType(left, right);
     char r = GenerateCode(right);
     char l = handleIdentifierLVal(left->symbol);
     writeToMemory(l,r);
@@ -203,84 +230,60 @@ char handleOperator(char* op, ASNode* operand1, ASNode* operand2){
         fprintf(target_file, "JR NC, %s\n", startLoopLabel);
         fprintf(target_file, "\n%s:\n", skipLoopLabel);
         break;
+    default:
+        cout<<"Undefined Operator : "<< op << endl;
+        exit(-1);
+    }
+    freeReg(r);
+    return l;
+}
+
+void storeBooleanInReg(char tempReg, char* skipLabel){
+    fprintf(target_file, "LD %c, 0xFF\n", tempReg);
+    fprintf(target_file, "\n%s:\n", skipLabel);
+    fprintf(target_file, "INC %c\n", tempReg);
+}
+
+char handleLogicalOperator(char* op, ASNode* operand1, ASNode* operand2){
+    char l = GenerateCode(operand1);
+    char r = GenerateCode(operand2);
+    char* skipLabel;
+    loadTOAccumulator(l);
+    clearRegister(l);
+    skipLabel = getLabel();
+    switch(*(op)){
     case '>':
-        loadTOAccumulator(l);
         fprintf(target_file, "CP %c\n", r);
-        startLoopLabel = getLabel();
-        fprintf(target_file, "JR NC, %s\n\n", startLoopLabel);
-        fprintf(target_file, "LD %c, 0x0\n", l);
-        skipLoopLabel = getLabel();
-        fprintf(target_file, "JR %s\n", skipLoopLabel);
-        fprintf(target_file, "\n%s:\n", startLoopLabel);
-        fprintf(target_file, "LD %c, 0x1\n", l);
-        fprintf(target_file, "\n%s:\n", skipLoopLabel);
+        fprintf(target_file, "JR NC, %s\n\n", skipLabel);
         break;
     case '<':
-        loadTOAccumulator(l);
         fprintf(target_file, "CP %c\n", r);
-        startLoopLabel = getLabel();
-        fprintf(target_file, "JR C, %s\n\n", startLoopLabel);
-        fprintf(target_file, "LD %c, 0x0\n", l);
-        skipLoopLabel = getLabel();
-        fprintf(target_file, "JR %s\n", skipLoopLabel);
-        fprintf(target_file, "\n%s:\n", startLoopLabel);
-        fprintf(target_file, "LD %c, 0x1\n", l);
-        fprintf(target_file, "\n%s:\n", skipLoopLabel);
+        fprintf(target_file, "JR C, %s\n\n", skipLabel);
         break;
     case 'G':
-        loadTOAccumulator(l);
         fprintf(target_file, "CP %c\n", r);
-        startLoopLabel = getLabel();
-        fprintf(target_file, "JR NC, %s\n\n", startLoopLabel);
-        fprintf(target_file, "JR Z, %s\n\n", startLoopLabel);
-        fprintf(target_file, "LD %c, 0x0\n", l);
-        skipLoopLabel = getLabel();
-        fprintf(target_file, "JR %s\n", skipLoopLabel);
-        fprintf(target_file, "\n%s:\n", startLoopLabel);
-        fprintf(target_file, "LD %c, 0x1\n", l);
-        fprintf(target_file, "\n%s:\n", skipLoopLabel);
+        fprintf(target_file, "JR NC, %s\n", skipLabel);
+        fprintf(target_file, "JR Z, %s\n\n", skipLabel);
         break;
     case 'L':
-        loadTOAccumulator(l);
         fprintf(target_file, "CP %c\n", r);
-        startLoopLabel = getLabel();
-        fprintf(target_file, "JR C, %s\n\n", startLoopLabel);
-        fprintf(target_file, "JR Z, %s\n\n", startLoopLabel);
-        fprintf(target_file, "LD %c, 0x0\n", l);
-        skipLoopLabel = getLabel();
-        fprintf(target_file, "JR %s\n", skipLoopLabel);
-        fprintf(target_file, "\n%s:\n", startLoopLabel);
-        fprintf(target_file, "LD %c, 0x1\n", l);
-        fprintf(target_file, "\n%s:\n", skipLoopLabel);
+        fprintf(target_file, "JR C, %s\n", skipLabel);
+        fprintf(target_file, "JR Z, %s\n\n", skipLabel);
         break;
     case 'N':
-        loadTOAccumulator(l);
         fprintf(target_file, "CP %c\n", r);
-        startLoopLabel = getLabel();
-        fprintf(target_file, "JR NZ, %s\n\n", startLoopLabel);
-        fprintf(target_file, "LD %c, 0x0\n", l);
-        skipLoopLabel = getLabel();
-        fprintf(target_file, "JR %s\n", skipLoopLabel);
-        fprintf(target_file, "\n%s:\n", startLoopLabel);
-        fprintf(target_file, "LD %c, 0x1\n", l);
-        fprintf(target_file, "\n%s:\n", skipLoopLabel);
+        fprintf(target_file, "JR NZ, %s\n\n", skipLabel);
         break;
     case 'E':
-        loadTOAccumulator(l);
         fprintf(target_file, "CP %c\n", r);
-        startLoopLabel = getLabel();
-        fprintf(target_file, "JR Z, %s\n\n", startLoopLabel);
-        fprintf(target_file, "LD %c, 0x0\n", l);
-        skipLoopLabel = getLabel();
-        fprintf(target_file, "JR %s\n", skipLoopLabel);
-        fprintf(target_file, "\n%s:\n", startLoopLabel);
-        fprintf(target_file, "LD %c, 0x1\n", l);
-        fprintf(target_file, "\n%s:\n", skipLoopLabel);
+        skipLabel = getLabel();
+        fprintf(target_file, "JR Z, %s\n\n", skipLabel);
         break;
     default:
         cout<<"Undefined Operator : "<< op << endl;
         exit(-1);
     }
+    storeBooleanInReg(l, skipLabel);
     freeReg(r);
     return l;
 }
@@ -329,7 +332,8 @@ void handleFunctionCalls(ASNode* fun){
 
 void handleIfControlStatements(ASNode* statement, LoopLabel loopLabelDetails, char* elseLabel){
     if (statement->varName == "if"){
-        char temp = GenerateCode(statement->left, loopLabelDetails);
+        validateType(BOOL_TYPE, statement->left);
+        char temp = GenerateCode(statement->left);
         char* skipBlockLabel = checkRegisterForFalse(temp);
         freeReg(temp);
         if(statement->right->nodeType == CONTROL && statement->right->varName == "else")
@@ -356,6 +360,7 @@ void handleControlStatements(ASNode* statement, LoopLabel loopLabelDetails){
     {
         char* loopLabel = getLabel();
         fprintf(target_file, "\n%s:\n", loopLabel);
+        validateType(BOOL_TYPE, statement->left);
         char temp = GenerateCode(statement->left);
         char* skipLoopLabel = checkRegisterForFalse(temp);
         freeReg(temp);
@@ -371,6 +376,7 @@ void handleControlStatements(ASNode* statement, LoopLabel loopLabelDetails){
         char* skipLoopLabel = getLabel();
         loopLabelDetails = {true, loopLabel, skipLoopLabel};
         GenerateCode(statement->left, loopLabelDetails);
+        validateType(BOOL_TYPE, statement->right);
         char temp = GenerateCode(statement->right);
         checkRegisterForTrue(temp, loopLabel);
         freeReg(temp);
@@ -384,23 +390,9 @@ void handleControlStatements(ASNode* statement, LoopLabel loopLabelDetails){
     }
 }
 
-string debug(ASNode* t){
-    switch (t->nodeType)
-    {
-    case NUMERIC_LITERAL:
-        return to_string(t->val);
-    case ARRAY_VARIABLE:
-        return "ARRAY";
-    case CONNECTOR:
-        return "CONNECTOR";
-    default:
-        return t->varName;
-    }
-}
-
 char GenerateCode(struct ASNode *t, LoopLabel loopLabelDetails){
     if (t!=NULL){
-        // cout<<"Debug Node : "<< t->nodeType << " = '" << debug(t) << "'" << endl;
+        // cout<<"Debug Node : "<< t->nodeType << " = '" << NodeTypeString(t)<< "'" << endl;
         switch (t->nodeType)
         {
         case NUMERIC_LITERAL:
@@ -413,7 +405,10 @@ char GenerateCode(struct ASNode *t, LoopLabel loopLabelDetails){
             handleAssignment(t->left, t->right);
             break;
         case OPERATOR:
+            validateType(t->left, t->right);
             return handleOperator(t->varName, t->left, t->right);
+        case LOGICAL_OPERATOR:
+            return handleLogicalOperator(t->varName, t->left, t->right);
         case FUNCTION_CALL:
             handleFunctionCalls(t);
             break;

@@ -9,6 +9,7 @@ enum NodeType {
     ARRAY_VARIABLE,
     ASSIGNMENT,
     OPERATOR,
+    LOGICAL_OPERATOR,
     FUNCTION_CALL,
     CONTROL,
     CONNECTOR,
@@ -23,7 +24,9 @@ enum IO_TYPE{
 
 enum DataType{
     INVALID_TYPE,
+    VOID_TYPE,
     BYTE_TYPE,
+    BOOL_TYPE,
 };
 
 typedef struct LoopLabel{

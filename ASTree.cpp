@@ -1,8 +1,15 @@
 #include <iostream>
 #include <cstdlib>
+#include <string.h>
 #include "ASTree.h"
 #include "GSTable.h"
 using namespace std;
+
+extern void CompileError(string);
+
+void UndeclaredError(string name){
+    CompileError(name + " is not declared");
+}
 
 ASNode* makeLeafNode(int n)
 {
@@ -34,7 +41,7 @@ ASNode* linkSymbol(ASNode* node)
 {
     GSNode* symbol = Lookup(node->varName);
     if(symbol==NULL)
-        return NULL;
+        UndeclaredError(node->varName);
     node->dataType = symbol->dtype;
     node->symbol = symbol;
     return node;
@@ -69,21 +76,41 @@ ASNode* makeArrayNode(ASNode* id, ASNode* size)
 struct ASNode* makeOperatorNode(char c,struct ASNode *l,struct ASNode *r){
     struct ASNode *temp;
     temp = (struct ASNode*)malloc(sizeof(struct ASNode));
+    temp->val = 0;
     temp->varName = (char *)malloc(sizeof(char));
     *(temp->varName) = c;
+    temp->symbol = nullptr;
     temp->nodeType = OPERATOR;
     if(c=='=')
         temp->nodeType = ASSIGNMENT;
+    temp->dataType = BYTE_TYPE;
     temp->left = l;
     temp->right = r;
     return temp;
 }
 
-struct ASNode* makeOperatorNode(char *c,struct ASNode *child){
+struct ASNode* makeLogicalOperatorNode(char c,struct ASNode *l,struct ASNode *r){
     struct ASNode *temp;
     temp = (struct ASNode*)malloc(sizeof(struct ASNode));
+    temp->val = 0;
+    temp->varName = (char *)malloc(sizeof(char));
+    *(temp->varName) = c;
+    temp->symbol = nullptr;
+    temp->nodeType = LOGICAL_OPERATOR;
+    temp->dataType = BOOL_TYPE;
+    temp->left = l;
+    temp->right = r;
+    return temp;
+}
+
+struct ASNode* makeFunctionNode(char *c,struct ASNode *child){
+    struct ASNode *temp;
+    temp = (struct ASNode*)malloc(sizeof(struct ASNode));
+    temp->val = 0;
     temp->varName = c;
+    temp->symbol = nullptr;
     temp->nodeType = FUNCTION_CALL;
+    temp->dataType = VOID_TYPE;
     temp->left = child;
     temp->right = NULL;
     return temp;

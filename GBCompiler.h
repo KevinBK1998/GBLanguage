@@ -14,8 +14,14 @@ char GenerateCode(ASNode *t);
 string NodeTypeString(ASNode* t){
     switch (t->nodeType)
     {
-    case NUMERIC_LITERAL:
-        return to_string(t->val);
+    case LITERAL:
+        if (t->dataType==CHAR_TYPE){
+            char char_c[2] = " ";
+            char_c[0]=*(t->varName);
+            return char_c;
+        }
+        else
+            return to_string(t->val);
     case ARRAY_VARIABLE:
         return "ARRAY";
     case CONNECTOR:

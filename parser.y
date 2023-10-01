@@ -21,20 +21,19 @@
 
 %type <node> Program ListStatement BlockStatement Statement InputStatement OutputStatement ControlStatement AssignmentStatement
 %type <node> Expression VariableList Type Variable
-%token BLOCK_OPEN BLOCK_CLOSE B_OPEN B_CLOSE IF ELSE DO WHILE BREAK CONTINUE READ WRITE WRITE_LN
-%token LT GT LE GE EQ NE PLUS MINUS MUL DIV BYTE BOOL
-%token <node> ID NUM
+%token B_OPEN B_CLOSE IF ELSE DO WHILE BREAK CONTINUE READ WRITE WRITE_LN TRUE FALSE
+%token LT GT LE GE EQ NE PLUS MINUS MUL DIV BYTE BOOL CHAR NULL_C
+%token <node> ID NUM CHARACTER
 %left PLUS MINUS
 %left MUL DIV
 %nonassoc LT GT LE GE
 %nonassoc EQ NE
 %%
 
-Program : BLOCK_OPEN ListStatement BLOCK_CLOSE  {GenerateCode($2);}
-        | BLOCK_OPEN BLOCK_CLOSE                { $$ = NULL; }
+Program : ListStatement {GenerateCode($1);}
         ;
 
-BlockStatement  : BLOCK_OPEN ListStatement BLOCK_CLOSE  {$$ = $2;}
+BlockStatement  : '{' ListStatement '}'  {$$ = $2;}
                 | Statement                             {$$ = $1;}
                 ;
 
@@ -43,8 +42,8 @@ ListStatement   : ListStatement BlockStatement  {$$ = makeConnectorNode($1,$2);}
                 ;
 
 Statement   : DeclareStatement      {$$=NULL;}
-            | InputStatement        {$$ = $1;}
-            | OutputStatement       {$$ = $1;}
+            | InputStatement        {loadAsciiTable();$$ = $1;}
+            | OutputStatement       {loadAsciiTable();$$ = $1;}
             | ControlStatement      {$$ = $1;}
             | AssignmentStatement   {$$ = $1;}
             | BREAK ';'             {$$ = makeControlNode("break");}
@@ -56,6 +55,7 @@ DeclareStatement    : Type VariableList ';' {DeclareLine($1, $2);}
 
 Type    : BYTE  {$$=makeDataTypeNode(BYTE_TYPE);}
         | BOOL  {$$=makeDataTypeNode(BOOL_TYPE);}
+        | CHAR  {$$=makeDataTypeNode(CHAR_TYPE);}
         ;
 
 VariableList    : VariableList ',' ID B_OPEN NUM B_CLOSE    {$$=makeConnectorNode($1, makeArrayNode($3, $5));}
@@ -78,7 +78,8 @@ ControlStatement    : IF '(' Expression ')' BlockStatement                      
                     | DO BlockStatement WHILE '(' Expression ')' ';'            {$$ = makeControlNode("do-while", $2, $5);}
                     ;
 
-AssignmentStatement : Variable '=' Expression ';' {$$ = makeOperatorNode('=',$1,$3);}
+AssignmentStatement : Variable '=' Expression ';'                           {$$ = makeOperatorNode('=',$1,$3);}
+                    | Variable B_OPEN Expression B_CLOSE '=' Expression ';' {$$ = makeOperatorNode('=',makeArrayNode($1, $3),$6);}
                     ;
 
 Expression  : Expression PLUS Expression            {$$ = makeOperatorNode('+',$1,$3);}
@@ -95,6 +96,10 @@ Expression  : Expression PLUS Expression            {$$ = makeOperatorNode('+',$
             | Variable                              {$$ = $1;}
             | Variable B_OPEN Expression B_CLOSE    {$$ = makeArrayNode($1, $3);}
             | NUM                                   {$$ = $1;}
+            | CHARACTER                             {$$ = $1;}
+            | TRUE                                  {$$ = makeLeafNode(true);}
+            | FALSE                                 {$$ = makeLeafNode(false);}
+            | NULL_C                                {$$ = makeLeafNode('\0');}
             ;
 Variable    : ID    {$$=linkSymbol($1);}
 

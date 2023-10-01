@@ -17,14 +17,41 @@ ASNode* makeLeafNode(int n)
     temp->val = n;
     temp->varName = nullptr;
     temp->symbol = nullptr;
-    temp->nodeType = NUMERIC_LITERAL;
+    temp->nodeType = LITERAL;
     temp->dataType = BYTE_TYPE;
     temp->left = nullptr;
     temp->right = nullptr;
     return temp;
 }
 
-ASNode* makeLeafNode(char* id)
+ASNode* makeLeafNode(bool flag)
+{
+    ASNode* temp = (ASNode*)malloc(sizeof(ASNode));
+    temp->val = flag;
+    temp->varName = nullptr;
+    temp->symbol = nullptr;
+    temp->nodeType = LITERAL;
+    temp->dataType = BOOL_TYPE;
+    temp->left = nullptr;
+    temp->right = nullptr;
+    return temp;
+}
+
+ASNode* makeLeafNode(char c)
+{
+    ASNode* temp = (ASNode*)malloc(sizeof(ASNode));
+    temp->val = 0;
+    temp->varName = (char *)malloc(sizeof(char));
+    *(temp->varName) = c;
+    temp->symbol = nullptr;
+    temp->nodeType = LITERAL;
+    temp->dataType = CHAR_TYPE;
+    temp->left = nullptr;
+    temp->right = nullptr;
+    return temp;
+}
+
+ASNode* makeVarNode(char* id)
 {
     ASNode* temp = (ASNode*)malloc(sizeof(ASNode));
     temp->val = 0;

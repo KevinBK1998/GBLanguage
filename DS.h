@@ -3,7 +3,7 @@
 #define DATASTRUCT_H
 
 enum NodeType {
-    NUMERIC_LITERAL,
+    LITERAL,
     DATA_TYPE,
     IDENTIFIER,
     ARRAY_VARIABLE,
@@ -27,6 +27,7 @@ enum DataType{
     VOID_TYPE,
     BYTE_TYPE,
     BOOL_TYPE,
+    CHAR_TYPE,
 };
 
 typedef struct LoopLabel{

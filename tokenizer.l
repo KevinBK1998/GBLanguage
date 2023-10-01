@@ -9,6 +9,12 @@
     extern void yyerror(char const *s);
 %}
 
+comment "//".*
+id  [a-zA-Z][a-zA-Z0-9_]*
+ch      "'"[0-9A-Za-z ]"'"
+null_c  "'\\0'"
+num [0-9]+
+
 %%
 "+"     {return PLUS;}
 "-"     {return MINUS;}
@@ -20,33 +26,43 @@
 ">="    {return GE;}
 "=="    {return EQ;}
 "!="    {return NE;}
-"{"     {return BLOCK_OPEN;}
-"}"     {return BLOCK_CLOSE;}
 "["     {return B_OPEN;}
 "]"     {return B_CLOSE;}
-[=;,()]     {return *yytext;}
+[=;,(){}]   {return *yytext;}
 
+"byte"      {return BYTE;}
+"bool"      {return BOOL;}
+"char"      {return CHAR;}
+
+"true"      {return TRUE;}
+"false"     {return FALSE;}
 "if"        {return IF;}
 "else"      {return ELSE;}
 "do"        {return DO;}
 "while"     {return WHILE;}
 "break"     {return BREAK;}
 "continue"  {return CONTINUE;}
-"byte"      {return BYTE;}
-"bool"      {return BOOL;}
 "read"      {return READ;}
 "write"     {return WRITE;}
 "writeln"   {return WRITE_LN;}
 
-[ \t\n] {/*do nothing*/}
+[ \t\n]     {/*ignore white spaces*/}
+{comment}   {/*ignore comment*/}
 
-[a-zA-Z][a-zA-Z0-9_]*   {
-                            char* temp = strdup(yytext);
-                            yylval.node = makeLeafNode(temp);
-                            return ID;
-                        }
+{null_c}    {return NULL_C;}
+{id}    {
+            char* temp = strdup(yytext);
+            yylval.node = makeVarNode(temp);
+            return ID;
+        }
 
-[0-9]+  {
+{ch}    {
+            char* temp = strdup(yytext);
+            yylval.node = makeLeafNode(temp[1]);
+            return CHARACTER;
+        }
+
+{num}   {
             number = atoi(yytext);
             yylval.node = makeLeafNode(number);
             return NUM;

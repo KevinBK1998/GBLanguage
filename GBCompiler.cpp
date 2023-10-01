@@ -15,7 +15,7 @@ void TypeCheckError(DataType expectedType, ASNode* exp){
     string message = "Expected type to be ";
     message += DataTypeString(expectedType);
     message += " but '";
-    if (exp->nodeType==NUMERIC_LITERAL)
+    if (exp->nodeType==LITERAL)
         message += to_string(exp->val);
     else
         message += exp->varName;
@@ -99,8 +99,9 @@ char handleArrayLVal(ASNode* var, ASNode* index){
 }
 
 void loadRegToReg(char from, char to){
-    loadTOAccumulator(from);
-    loadFROMAccumulator(to);
+    if(from!=to){
+        fprintf(target_file, "LD %c, %c\n", to, from);
+    }
 }
 
 void backup(){
@@ -124,8 +125,7 @@ void restore(){
 char readFromMemory(char address){
     freeReg(address);
     backup();
-    if(address!='C')
-        loadRegToReg(address, 'C');
+    loadRegToReg(address, 'C');
     fprintf(target_file, "LD A, [HC]\n");
     restore();
     address=getReg();
@@ -149,13 +149,11 @@ void writeToMemory(char address, char data){
     freeReg(address);
     freeReg(data);
     backup();
-    if (address != 'C'){
-        if (data =='C'){
-            loadRegToReg(data,'D');
-            data = 'D';
-        }
-        loadRegToReg(address,'C');
+    if (data =='C'){
+        loadRegToReg(data,'D');
+        data = 'D';
     }
+    loadRegToReg(address,'C');
     fprintf(target_file, "LD A, %c\n", data);
     fprintf(target_file, "LD [HC], A\n");
     restore();
@@ -174,7 +172,11 @@ void validateType(DataType dataType, ASNode* exp){
 void handleAssignment(ASNode* left, ASNode* right){
     validateType(left, right);
     char r = GenerateCode(right);
-    char l = handleIdentifierLVal(left->symbol);
+    char l;
+    if (left->nodeType != ARRAY_VARIABLE)
+        l = handleIdentifierLVal(left->symbol);
+    else
+        l = handleArrayLVal(left->left, left->right);
     writeToMemory(l,r);
 }
 
@@ -300,13 +302,13 @@ void loadAsciiTable(){
 }
 
 void handleFunctionCalls(ASNode* fun){
-    loadAsciiTable();
     if (fun->varName == "write"||fun->varName == "writeln"){
         char temp = GenerateCode(fun->left);
         backup();
         fprintf(target_file, "//WRITE\n");
         loadRegToReg(temp,'B');
         fprintf(target_file, "LD A, 0x%X\n", (fun->varName == "writeln")?WRITE_NL_CALL:WRITE_CALL);
+        fprintf(target_file, "LD C, 0x%X\n", fun->left->dataType);
         fprintf(target_file, "CALL LIBRARY\n");
         restore();
         freeReg(temp);
@@ -390,13 +392,35 @@ void handleControlStatements(ASNode* statement, LoopLabel loopLabelDetails){
     }
 }
 
+char handleCharLiteral(char literal){
+    char temp = getReg();
+    fprintf(target_file, "LD %c, 0x%X\n", temp, literal);
+    return temp;
+}
+
+char handleLiteral(ASNode* t){
+    switch (t->dataType)
+    {
+    case BYTE_TYPE:
+    case BOOL_TYPE:
+        return handleNumericLiteral(t->val);
+    case CHAR_TYPE:
+        return handleCharLiteral(*(t->varName));
+    default:
+        cout<<"Undefined Node : "<< t->dataType << " = '" <<t->varName << "'" << endl;
+        exit(-1);
+        break;
+    }
+    return 'a';
+}
+
 char GenerateCode(struct ASNode *t, LoopLabel loopLabelDetails){
     if (t!=NULL){
         // cout<<"Debug Node : "<< t->nodeType << " = '" << NodeTypeString(t)<< "'" << endl;
         switch (t->nodeType)
         {
-        case NUMERIC_LITERAL:
-            return handleNumericLiteral(t->val);
+        case LITERAL:
+            return handleLiteral(t);
         case IDENTIFIER:
             return handleIdentifier(t);
         case ARRAY_VARIABLE:

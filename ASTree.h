@@ -3,10 +3,16 @@
 #define ASTREE_H
 
 // Make a leaf numeric literal node
-ASNode* makeLeafNode(int n);
+ASNode* makeLeafNode(int);
+
+// Make a leaf boolean literal node
+ASNode* makeLeafNode(bool);
+
+// Make a leaf char literal node
+ASNode* makeLeafNode(char);
 
 // Make a leaf identifier node
-ASNode* makeLeafNode(char* id);
+ASNode* makeVarNode(char*);
 
 /*
 Link symbol to the node

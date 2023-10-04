@@ -51,6 +51,19 @@ ASNode* makeLeafNode(char c)
     return temp;
 }
 
+ASNode* makeLeafNode(char* str)
+{
+    ASNode* temp = (ASNode*)malloc(sizeof(ASNode));
+    temp->val = 0;
+    temp->varName = str;
+    temp->symbol = nullptr;
+    temp->nodeType = LITERAL;
+    temp->dataType = STR_TYPE;
+    temp->left = nullptr;
+    temp->right = nullptr;
+    return temp;
+}
+
 ASNode* makeVarNode(char* id)
 {
     ASNode* temp = (ASNode*)malloc(sizeof(ASNode));

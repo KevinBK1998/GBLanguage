@@ -10,10 +10,11 @@
 %}
 
 comment "//".*
+num [0-9]+
 id  [a-zA-Z][a-zA-Z0-9_]*
 ch      "'"[0-9A-Za-z ]"'"
+str     "\""[0-9A-Za-z ]*"\""
 null_c  "'\\0'"
-num [0-9]+
 
 %%
 "+"     {return PLUS;}
@@ -33,6 +34,7 @@ num [0-9]+
 "byte"      {return BYTE;}
 "bool"      {return BOOL;}
 "char"      {return CHAR;}
+"string"    {return STRING_T;}
 
 "true"      {return TRUE;}
 "false"     {return FALSE;}
@@ -60,6 +62,14 @@ num [0-9]+
             char* temp = strdup(yytext);
             yylval.node = makeLeafNode(temp[1]);
             return CHARACTER;
+        }
+
+{str}   {
+            char* temp = strdup(yytext);
+            temp[strlen(temp)-1]='\0';
+            temp++;
+            yylval.node = makeLeafNode(temp);
+            return STRING;
         }
 
 {num}   {

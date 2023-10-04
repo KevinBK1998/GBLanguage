@@ -22,8 +22,8 @@
 %type <node> Program ListStatement BlockStatement Statement InputStatement OutputStatement ControlStatement AssignmentStatement
 %type <node> Expression VariableList Type Variable
 %token B_OPEN B_CLOSE IF ELSE DO WHILE BREAK CONTINUE READ WRITE WRITE_LN TRUE FALSE
-%token LT GT LE GE EQ NE PLUS MINUS MUL DIV BYTE BOOL CHAR NULL_C
-%token <node> ID NUM CHARACTER
+%token LT GT LE GE EQ NE PLUS MINUS MUL DIV BYTE BOOL CHAR STRING_T NULL_C
+%token <node> ID NUM CHARACTER STRING
 %left PLUS MINUS
 %left MUL DIV
 %nonassoc LT GT LE GE
@@ -53,9 +53,10 @@ Statement   : DeclareStatement      {$$=NULL;}
 DeclareStatement    : Type VariableList ';' {DeclareLine($1, $2);}
                     ;
 
-Type    : BYTE  {$$=makeDataTypeNode(BYTE_TYPE);}
-        | BOOL  {$$=makeDataTypeNode(BOOL_TYPE);}
-        | CHAR  {$$=makeDataTypeNode(CHAR_TYPE);}
+Type    : BYTE      {$$=makeDataTypeNode(BYTE_TYPE);}
+        | BOOL      {$$=makeDataTypeNode(BOOL_TYPE);}
+        | CHAR      {$$=makeDataTypeNode(CHAR_TYPE);}
+        | STRING_T  {$$=makeDataTypeNode(STR_TYPE);}
         ;
 
 VariableList    : VariableList ',' ID B_OPEN NUM B_CLOSE    {$$=makeConnectorNode($1, makeArrayNode($3, $5));}
@@ -97,6 +98,7 @@ Expression  : Expression PLUS Expression            {$$ = makeOperatorNode('+',$
             | Variable B_OPEN Expression B_CLOSE    {$$ = makeArrayNode($1, $3);}
             | NUM                                   {$$ = $1;}
             | CHARACTER                             {$$ = $1;}
+            | STRING                                {$$ = $1;}
             | TRUE                                  {$$ = makeLeafNode(true);}
             | FALSE                                 {$$ = makeLeafNode(false);}
             | NULL_C                                {$$ = makeLeafNode('\0');}

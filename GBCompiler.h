@@ -20,6 +20,8 @@ string NodeTypeString(ASNode* t){
             char_c[0]=*(t->varName);
             return char_c;
         }
+        else if (t->dataType==STR_TYPE)
+            return t->varName;
         else
             return to_string(t->val);
     case ARRAY_VARIABLE:
@@ -39,6 +41,10 @@ string DataTypeString(DataType dataType){
         return "BYTE";
     case BOOL_TYPE:
         return "BOOL";
+    case CHAR_TYPE:
+        return "CHAR";
+    case STR_TYPE:
+        return "STRING";
     default:
         return "INVALID";
     }

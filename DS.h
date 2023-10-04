@@ -28,6 +28,7 @@ enum DataType{
     BYTE_TYPE,
     BOOL_TYPE,
     CHAR_TYPE,
+    STR_TYPE,
 };
 
 typedef struct LoopLabel{

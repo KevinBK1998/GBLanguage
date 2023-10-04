@@ -11,6 +11,9 @@ ASNode* makeLeafNode(bool);
 // Make a leaf char literal node
 ASNode* makeLeafNode(char);
 
+// Make a leaf string literal node
+ASNode* makeLeafNode(char*);
+
 // Make a leaf identifier node
 ASNode* makeVarNode(char*);
 

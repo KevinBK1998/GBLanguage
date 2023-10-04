@@ -93,7 +93,15 @@ char handleArrayLVal(ASNode* var, ASNode* index){
     GSNode* symbol = var->symbol;
     char temp = GenerateCode(index);
     fprintf(target_file, "LD A, 0x%X\n", symbol->bind & 0xFF);
-    fprintf(target_file, "SUB A, %c\n", temp);
+    fprintf(target_file, "ADD A, %c\n", temp);
+    fprintf(target_file, "LD %c, A\n", temp);
+    return temp;
+}
+
+char handleArrayLVal(ASNode* var){
+    GSNode* symbol = var->symbol;
+    fprintf(target_file, "LD A, 0x%X\n", symbol->bind & 0xFF);
+    char temp = getReg();
     fprintf(target_file, "LD %c, A\n", temp);
     return temp;
 }
@@ -135,6 +143,7 @@ char readFromMemory(char address){
 
 char handleIdentifier(ASNode* var){
     char temp = handleIdentifierLVal(var->symbol);
+    if (var->dataType == STR_TYPE) return temp;
     temp = readFromMemory(temp);
     return temp;
 }
@@ -169,15 +178,38 @@ void validateType(DataType dataType, ASNode* exp){
         TypeCheckError(dataType, exp);
 }
 
+void handleStringAssignment(ASNode* left, char right) {
+    cout<<"Debug Node : "<< left->dataType << " = '" << DataTypeString(left->dataType)<< "'" << endl;
+    char l = handleArrayLVal(left);
+    freeReg(l);
+    freeReg(right);
+    backup();
+    loadRegToReg(l, 'L');
+    fprintf(target_file, "LD H, 0x%X\n", 0xFF);
+    loadRegToReg(right, 'C');
+    char* loopLabel = getLabel();
+    fprintf(target_file, "\n%s:\n", loopLabel);
+    fprintf(target_file, "LD A, [HC]\n");
+    fprintf(target_file, "INC C\n");
+    fprintf(target_file, "LDI [HL], A\n");
+    fprintf(target_file, "OR A\n");
+    fprintf(target_file, "JR NZ, %s\n\n", loopLabel);
+    restore();
+}
+
 void handleAssignment(ASNode* left, ASNode* right){
     validateType(left, right);
     char r = GenerateCode(right);
-    char l;
-    if (left->nodeType != ARRAY_VARIABLE)
-        l = handleIdentifierLVal(left->symbol);
-    else
-        l = handleArrayLVal(left->left, left->right);
-    writeToMemory(l,r);
+    if (left->dataType == STR_TYPE)
+        handleStringAssignment(left, r);
+    else{
+        char l;
+        if (left->nodeType == ARRAY_VARIABLE)
+            l = handleArrayLVal(left->left, left->right);
+        else
+            l = handleIdentifierLVal(left->symbol);
+        writeToMemory(l,r);
+    }
 }
 
 char* checkRegisterForFalse(char tempReg){
@@ -327,6 +359,8 @@ void handleFunctionCalls(ASNode* fun){
         fprintf(target_file, "CALL LIBRARY\n");
         restore();
         char temp = getReg();
+        if(exp->dataType == BYTE_TYPE)
+            fprintf(target_file, "SUB A, 0x%X\n", 0x30);
         fprintf(target_file, "LD %c, A\n", temp);
         writeToMemory(add, temp);
     }
@@ -398,6 +432,20 @@ char handleCharLiteral(char literal){
     return temp;
 }
 
+char handleStrLiteral(char* literal){
+    backup();
+    fprintf(target_file, "LD C, 0x%X\n", 0x83);
+    for(;*literal!='\0';literal++){
+        fprintf(target_file, "LD A, 0x%X\n", *literal);
+        fprintf(target_file, "LD [HC], A\n");
+        fprintf(target_file, "INC C\n");
+    }
+    restore();
+    char tempAddress = getReg();
+    fprintf(target_file, "LD %c, 0x%X\n", tempAddress, 0x83);
+    return tempAddress;
+}
+
 char handleLiteral(ASNode* t){
     switch (t->dataType)
     {
@@ -406,8 +454,10 @@ char handleLiteral(ASNode* t){
         return handleNumericLiteral(t->val);
     case CHAR_TYPE:
         return handleCharLiteral(*(t->varName));
+    case STR_TYPE:
+        return handleStrLiteral(t->varName);
     default:
-        cout<<"Undefined Node : "<< t->dataType << " = '" <<t->varName << "'" << endl;
+        cout<<"Undefined Literal type : "<< t->dataType << " = '" <<t->varName << "'" << endl;
         exit(-1);
         break;
     }

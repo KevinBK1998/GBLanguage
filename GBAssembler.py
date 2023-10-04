@@ -89,11 +89,11 @@ MAGIC_PREFIX = 0xCB
 assemblyMap = {
     "NOP":0x00,             "LD BC, 0":0x01,    "INC BC":0x03,      "INC B":0x04,       "DEC B":0x05,       "LD B, 0":0x06,         "ADD HL, BC":0x09,  "LD A, [BC]":0x0A,  "INC C":0x0C,       "DEC C":0x0D,   "LD C, 0":0x0E,
     "LD DE, 0":0x11,        "INC DE":0x13,      "DEC D":0x15,       "LD D, 0":0x16,     "RL A":0x17,        "JR 0":0x18,            "LD A, [DE]":0x1A,  "DEC E":0x1D,       "LD E, 0":0x1E,     "RR A":0x1F,
-    "JR NZ, 0":0x20,        "LD HL, 0":0x21,    "LDI [HL], A":0x22, "INC HL":0x23,      "INC H":0x24,       "DAA":0x27,             "JR Z, 0":0x28,     "LD L, 0":0x2E,     "CPL":0x2F,
+    "JR NZ, 0":0x20,        "LD HL, 0":0x21,    "LDI [HL], A":0x22, "INC HL":0x23,      "INC H":0x24,       "LD H, 0":0x26,         "DAA":0x27,         "JR Z, 0":0x28,     "LD L, 0":0x2E,     "CPL":0x2F,
     "JR NC, 0":0x30,        "LD SP, 0":0x31,    "LDD [HL], A":0x32, "JR C, 0":0x38,     "INC A":0x3C,       "DEC A":0x3D,           "LD A, 0":0x3E,
-    "LD B, B":0x40,         "LD B, C":0x41,     "LD B, A":0x47,     "LD C, B":0x48,     "LD C, C":0x49,     "LD C, D":0x4A,         "LD C, A":0x4F,
+    "LD B, B":0x40,         "LD B, C":0x41,     "LD B, A":0x47,     "LD C, B":0x48,     "LD C, C":0x49,     "LD C, D":0x4A,         "LD C, L":0x4D,     "LD C, A":0x4F,
     "LD D, B":0x50,         "LD D, C":0x51,     "LD D, A":0x57,     "LD E, C":0x59,     "LD E, A":0x5F,
-    "LD H, A":0x67,         "LD L, A":0x6F,
+    "LD H, A":0x67,         "LD L, C":0x69,     "LD L, A":0x6F,
     "HALT":0x76,            "LD [HL], A":0x77,  "LD A, B":0x78,     "LD A, C":0x79,     "LD A, D":0x7A,     "LD A, E":0x7B,         "LD A, H":0x7C,     "LD A, L":0x7D,     "LD A, [HL]":0x7F,
     "ADD A, B":0x80,        "ADD A, C":0x81,    "ADD A, D":0x82,    "ADD A, E":0x83,    "ADD A, L":0x85,    "ADD A, [HL]":0x86,
     "SUB A, B":0x90,        "SUB A, C":0x91,    "SUB A, D":0x92,    "SUB A, E":0x93,    "SUB A, A":0x97,
@@ -253,10 +253,17 @@ def assemblerCodeGen(isLibrary=False):
             bin.write(bytearray([0]))
             line+=1
 
+def CleanUp():
+    print("Deleting incomplete file", dst_file)
+    os.remove(dst_file)
+
 isLibrary = (src_file == "library.gsm")
 try:
     ReadAllLabels(isLibrary)
     assemblerCodeGen(isLibrary)
-except (ValueError, FileNotFoundError):
-    print("Deleting incomplete file", dst_file)
-    os.remove(dst_file)
+except ValueError:
+    print("\nERROR: Data exceeds byte limit of 0xFF\n")
+    CleanUp()
+except FileNotFoundError:
+    print("\nERROR: Unable to find source file\n")
+    CleanUp()
